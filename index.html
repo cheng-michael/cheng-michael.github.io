@@ -168,14 +168,22 @@
             toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
 
-        // --- ASCII DENSITY FLUID ENGINE ---
+        // --- ASCII FLUID ENGINE v3 ---
         const canvas = document.getElementById('ascii-overlay');
         const ctx = canvas.getContext('2d');
         const triggerBtn = document.getElementById('ripple-trigger');
         const contentBlock = document.getElementById('content-block');
         
-        // NEW: Ordered by visual density from heaviest to lightest
-        const DENSITY_CHARS = ['O', 'o', '*', '+', '=', '-', '.', '`'];
+        // NEW: Tiers of density. 
+        // Index 0 = HEAVY (Start of wave)
+        // Index 4 = LIGHT (End of wave)
+        const DENSITY_TIERS = [
+            ['@', '#', 'O', '0', '8', '&'],  // Heaviest
+            ['o', '*', 'x', '%', 'z'],      // Heavy
+            ['+', '=', '~', '-', '^'],      // Medium
+            ['.', ',', '\'', '`', '_']      // Lightest
+        ];
+        
         const FONT_SIZE = 14; 
         
         let drops = [];
@@ -222,7 +230,6 @@
 
             getRings() {
                 const rings = [];
-                // Intensity is now the driving factor for character selection
                 const baseIntensity = Math.max(0, 1 - (this.age / 180)); 
                 if (baseIntensity <= 0) return [];
 
@@ -231,9 +238,7 @@
                     const r = this.radius - offset;
                     if (r <= 0) continue;
 
-                    // Calculate intensity for this specific ring
                     let ringIntensity = baseIntensity * (1 - (i * 0.3));
-                    // Spatial dissipation
                     ringIntensity *= (120 / (r + 120)); 
 
                     if (ringIntensity > 0.05) {
@@ -275,20 +280,15 @@
                 const rings = drop.getRings();
 
                 rings.forEach(ring => {
-                    // NEW: Map intensity to character index
-                    // Ensure intensity is clamped between 0 and 1
+                    // 1. Determine Tier based on intensity
                     let safeIntensity = Math.max(0, Math.min(1, ring.intensity));
+                    let tierIndex = Math.floor((1 - safeIntensity) * DENSITY_TIERS.length);
+                    // Clamp to safe array bounds
+                    tierIndex = Math.max(0, Math.min(DENSITY_TIERS.length - 1, tierIndex));
                     
-                    // Map 1.0-0.0 intensity to 0-(length-1) index
-                    let charIndex = Math.floor((1 - safeIntensity) * (DENSITY_CHARS.length - 1));
-                    // Clamp index just to be safe
-                    charIndex = Math.max(0, Math.min(DENSITY_CHARS.length - 1, charIndex));
-                    
-                    const selectedChar = DENSITY_CHARS[charIndex];
+                    const charSet = DENSITY_TIERS[tierIndex];
 
-                    // Hybrid Fade: If intensity is very low, also fade alpha for smoothness
                     const alpha = safeIntensity < 0.3 ? safeIntensity * 3 : 1;
-
                     const circumference = 2 * Math.PI * ring.r;
                     const charCount = Math.floor(circumference / (FONT_SIZE * 1.2));
                     
@@ -305,12 +305,17 @@
                             continue;
                         }
                         
+                        // 2. Select specific character from the tier
+                        // We use a spatial hash so the character is stable for that coordinate
+                        // (Prevents flickering)
+                        const hash = Math.floor(charX + charY);
+                        const selectedChar = charSet[hash % charSet.length];
+
                         const isDark = body.classList.contains('dark-mode');
                         ctx.fillStyle = isDark 
                             ? `rgba(255, 255, 255, ${alpha})` 
                             : `rgba(0, 0, 0, ${alpha})`;
                         
-                        // Draw the specific density character
                         ctx.fillText(selectedChar, charX, charY);
                     }
                 });
