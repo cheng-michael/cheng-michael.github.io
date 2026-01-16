@@ -24,32 +24,37 @@
             font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
             font-size: 14px;
             line-height: 1.6;
-            text-transform: lowercase; /* forces all text to lowercase */
+            text-transform: lowercase;
             
-            /* centering layout */
+            /* This centers the "block" on the screen */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             padding: 2rem;
-            text-align: center;
+            
             transition: background-color 0.3s, color 0.3s;
         }
 
         main {
-            max-width: 500px;
+            /* Limits the width so it looks like a document */
+            max-width: 520px; 
             width: 100%;
+            /* This ensures the text inside aligns left */
+            text-align: left; 
         }
 
         h1 {
-            font-size: 14px; /* same size as body text */
-            font-weight: normal; /* remove bold */
+            font-size: 14px;
+            font-weight: normal;
             margin-bottom: 2rem;
         }
 
         p {
             margin-bottom: 2rem;
+            /* Optional: Justify makes it a perfect square block */
+            /* text-align: justify; */ 
         }
 
         ul {
@@ -62,16 +67,16 @@
         }
 
         a {
-            color: inherit; /* no blue links */
+            color: inherit;
             text-decoration: underline;
             cursor: pointer;
         }
 
         a:hover {
-            text-decoration-style: double; /* subtle hover effect */
+            text-decoration-style: double;
         }
 
-        /* the toggle button */
+        /* Toggle Button */
         #theme-toggle {
             position: fixed;
             bottom: 2rem;
@@ -124,7 +129,7 @@
         const toggleButton = document.getElementById('theme-toggle');
         const body = document.body;
 
-        // check system preference on load
+        // Check system preference
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             body.classList.add('dark-mode');
             toggleButton.textContent = 'light';
@@ -132,8 +137,6 @@
 
         toggleButton.addEventListener('click', () => {
             body.classList.toggle('dark-mode');
-            
-            // if body has 'dark-mode' class, we are in dark mode, so button should offer 'light'
             if (body.classList.contains('dark-mode')) {
                 toggleButton.textContent = 'light';
             } else {
