@@ -26,9 +26,10 @@
         body {
             background-color: var(--bg);
             color: var(--text);
+            /* Monospace Stack */
             font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
             font-size: 14px;
-            line-height: 1.6;
+            line-height: 1.6; /* Important: Matches the grid logic */
             text-transform: lowercase;
             
             display: flex;
@@ -78,7 +79,6 @@
             transition: color 0.2s;
         }
 
-        /* FIXED: Hover no longer creates a double line, just changes color */
         a:hover {
             color: var(--headings);
             text-decoration: underline; 
@@ -112,7 +112,6 @@
         #theme-toggle { right: 2rem; }
         #ripple-trigger { left: 2rem; }
 
-        /* FIXED: Hide Rain button on Mobile */
         @media (max-width: 768px) {
             #ripple-trigger {
                 display: none;
@@ -175,7 +174,7 @@
             toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
 
-        // --- ASCII FLUID ENGINE v7 (Adjusted Quantities) ---
+        // --- ASCII GRID ENGINE v1 (Crisp Text) ---
         const canvas = document.getElementById('ascii-overlay');
         const ctx = canvas.getContext('2d');
         const triggerBtn = document.getElementById('ripple-trigger');
@@ -188,28 +187,31 @@
             ['.', ',', '\'', '`', '_']      
         ];
         
+        // GRID CONFIGURATION
         const FONT_SIZE = 14; 
+        const LINE_HEIGHT = 1.6;
+        // Calculated cell sizes to match CSS
+        const CELL_HEIGHT = FONT_SIZE * LINE_HEIGHT; // 14 * 1.6 = 22.4px
+        const CELL_WIDTH = FONT_SIZE * 0.6; // Approx width of monospaced char
         
         let drops = [];
         let w, h;
         
-        // ACCELERATOR VARIABLES
         let isHolding = false;
         let spawnRate = 0;          
-        
-        // ADJUSTMENT: Drastically reduced Max Rate.
-        // 1.5 means roughly 15% chance per frame => ~9 drops per second max
         let maxSpawnRate = 1.5;      
-        
-        let rampUpSpeed = 0.05;      // Slower ramp up
-        let rampDownSpeed = 0.02;    // Slower taper off
+        let rampUpSpeed = 0.05;      
+        let rampDownSpeed = 0.02;    
 
         function resize() {
-            w = canvas.width = window.innerWidth;
-            h = canvas.height = window.innerHeight;
+            // Snap canvas size to nearest grid multiple to keep alignment perfect
+            const rawW = window.innerWidth;
+            const rawH = window.innerHeight;
+            w = canvas.width = rawW;
+            h = canvas.height = rawH;
+            
             ctx.font = `${FONT_SIZE}px Menlo, Monaco, Consolas, monospace`;
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
+            ctx.textBaseline = 'top'; // Draw from top-left of cell
         }
         window.addEventListener('resize', resize);
         resize();
@@ -263,7 +265,6 @@
                 this.age++;
                 this.radius += this.velocity;
                 if (this.velocity > 0.2) this.velocity *= this.friction;
-                
                 if (this.age > this.maxAge) this.isDead = true;
             }
 
@@ -271,7 +272,6 @@
                 const rings = [];
                 let progress = this.age / this.maxAge;
                 let baseIntensity = this.maxIntensity * (1 - progress);
-                
                 if (baseIntensity <= 0) return [];
 
                 for (let i = 0; i < 3; i++) {
@@ -294,11 +294,7 @@
         triggerBtn.addEventListener('mousedown', () => { isHolding = true; });
         triggerBtn.addEventListener('mouseup', () => { isHolding = false; });
         triggerBtn.addEventListener('mouseleave', () => { isHolding = false; });
-        
-        triggerBtn.addEventListener('click', () => {
-            // Tiny boost on click
-            spawnRate = Math.min(spawnRate + 1, maxSpawnRate); 
-        });
+        triggerBtn.addEventListener('click', () => { spawnRate = Math.min(spawnRate + 1, maxSpawnRate); });
 
         // --- ANIMATION ---
         function animate() {
@@ -306,30 +302,24 @@
             
             // 1. RATE CONTROLLER
             if (isHolding) {
-                if (spawnRate < maxSpawnRate) {
-                    spawnRate += rampUpSpeed;
-                }
+                if (spawnRate < maxSpawnRate) spawnRate += rampUpSpeed;
             } else {
-                if (spawnRate > 0) {
-                    spawnRate -= rampDownSpeed;
-                }
+                if (spawnRate > 0) spawnRate -= rampDownSpeed;
             }
-            
             if (spawnRate < 0) spawnRate = 0;
 
             // 2. SPAWNER
             if (spawnRate > 0) {
-                // Determine spawn chance based on rate (0 to 10 scale)
                 const chance = Math.random() * 10;
-                
-                if (chance < spawnRate) {
-                    drops.push(new RealisticDrop());
-                }
+                if (chance < spawnRate) drops.push(new RealisticDrop());
             }
 
-            // 3. PHYSICS
+            // 3. PHYSICS & RENDER
             drops = drops.filter(d => !d.isDead);
 
+            // To render cleanly, we need to map physics (circles) to the grid (cells).
+            // Optimization: Only check cells near the rings.
+            
             drops.forEach(drop => {
                 drop.update();
                 const rings = drop.getRings();
@@ -340,27 +330,41 @@
                     tierIndex = Math.max(0, Math.min(DENSITY_TIERS.length - 1, tierIndex));
                     
                     const charSet = DENSITY_TIERS[tierIndex];
-
                     const alpha = safeIntensity < 0.3 ? safeIntensity * 3 : 1;
-                    const circumference = 2 * Math.PI * ring.r;
-                    
-                    const densityMod = drop.type === 'small' ? 1.5 : 1.2;
-                    const charCount = Math.floor(circumference / (FONT_SIZE * densityMod));
-                    
-                    for (let i = 0; i < charCount; i++) {
-                        const angle = (i / charCount) * Math.PI * 2;
-                        const charX = drop.x + Math.cos(angle) * ring.r;
-                        const charY = drop.y + Math.sin(angle) * ring.r;
 
-                        if (charX < 0 || charX > w || charY < 0 || charY > h) continue;
+                    // GRID RENDERING LOGIC
+                    // We iterate along the circumference, but we snap the results to the grid.
+                    // We step by an angle that roughly corresponds to 1 cell width to avoid holes.
+                    const circumference = 2 * Math.PI * ring.r;
+                    const steps = Math.floor(circumference / CELL_WIDTH);
+                    
+                    for (let i = 0; i < steps; i++) {
+                        const angle = (i / steps) * Math.PI * 2;
+                        
+                        // Raw float coordinates
+                        const rawX = drop.x + Math.cos(angle) * ring.r;
+                        const rawY = drop.y + Math.sin(angle) * ring.r;
+
+                        // Check bounds before snapping
+                        if (rawX < 0 || rawX > w || rawY < 0 || rawY > h) continue;
 
                         const rect = contentBlock.getBoundingClientRect();
-                        if (charX > rect.left - 20 && charX < rect.right + 20 &&
-                            charY > rect.top - 20 && charY < rect.bottom + 20) {
+                        if (rawX > rect.left - 20 && rawX < rect.right + 20 &&
+                            rawY > rect.top - 20 && rawY < rect.bottom + 20) {
                             continue;
                         }
-                        
-                        const hash = Math.floor(charX + charY);
+
+                        // SNAP TO GRID
+                        // Calculate column and row index
+                        const col = Math.floor(rawX / CELL_WIDTH);
+                        const row = Math.floor(rawY / CELL_HEIGHT);
+
+                        // Convert back to pixel coordinates for drawing
+                        const snappedX = col * CELL_WIDTH;
+                        const snappedY = row * CELL_HEIGHT + (CELL_HEIGHT - FONT_SIZE)/2; // Vertical center align
+
+                        // Stable random char
+                        const hash = col + row; 
                         const selectedChar = charSet[hash % charSet.length];
 
                         const isDark = body.classList.contains('dark-mode');
@@ -368,7 +372,7 @@
                             ? `rgba(255, 255, 255, ${alpha})` 
                             : `rgba(0, 0, 0, ${alpha})`;
                         
-                        ctx.fillText(selectedChar, charX, charY);
+                        ctx.fillText(selectedChar, snappedX, snappedY);
                     }
                 });
             });
