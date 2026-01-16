@@ -6,27 +6,30 @@
     <title>michael cheng</title>
     <style>
         :root {
-            /* light mode default */
+            /* LIGHT MODE */
             --bg: #ffffff;
-            --fg: #000000;
+            --headings: #000000;       /* Pure Black */
+            --text: #555555;           /* Dark Grey */
         }
 
         body.dark-mode {
-            --bg: #000000;
-            --fg: #ffffff;
+            /* DARK MODE */
+            --bg: #111111;             /* I used #111 instead of #000 for softer contrast */
+            --headings: #ffffff;       /* Pure White */
+            --text: #a0a0a0;           /* Light Grey */
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background-color: var(--bg);
-            color: var(--fg);
+            color: var(--text);        /* Applies grey to all body text by default */
             font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
             font-size: 14px;
             line-height: 1.6;
             text-transform: lowercase;
             
-            /* This centers the "block" on the screen */
+            /* Center the block vertically and horizontally */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -38,14 +41,13 @@
         }
 
         main {
-            /* Limits the width so it looks like a document */
-            max-width: 520px; 
+            max-width: 520px;
             width: 100%;
-            /* This ensures the text inside aligns left */
-            text-align: left; 
+            text-align: left; /* Text inside the block stays left-aligned */
         }
 
         h1 {
+            color: var(--headings); /* This forces the headline to be Black/White */
             font-size: 14px;
             font-weight: normal;
             margin-bottom: 2rem;
@@ -53,8 +55,6 @@
 
         p {
             margin-bottom: 2rem;
-            /* Optional: Justify makes it a perfect square block */
-            /* text-align: justify; */ 
         }
 
         ul {
@@ -70,9 +70,11 @@
             color: inherit;
             text-decoration: underline;
             cursor: pointer;
+            transition: color 0.2s;
         }
 
         a:hover {
+            color: var(--headings); /* On hover, link turns Black/White for effect */
             text-decoration-style: double;
         }
 
@@ -83,16 +85,17 @@
             right: 2rem;
             background: none;
             border: none;
-            color: inherit;
+            color: var(--text);
             font-family: inherit;
             font-size: 14px;
             cursor: pointer;
             text-decoration: underline;
             padding: 0.5rem;
-            opacity: 0.5;
+            opacity: 0.7;
         }
 
         #theme-toggle:hover {
+            color: var(--headings);
             opacity: 1;
         }
     </style>
@@ -129,7 +132,6 @@
         const toggleButton = document.getElementById('theme-toggle');
         const body = document.body;
 
-        // Check system preference
         if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
             body.classList.add('dark-mode');
             toggleButton.textContent = 'light';
