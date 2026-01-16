@@ -168,20 +168,18 @@
             toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
 
-        // --- ASCII FLUID ENGINE v3 ---
+        // --- ASCII FLUID ENGINE v4 (Faster Dissipation) ---
         const canvas = document.getElementById('ascii-overlay');
         const ctx = canvas.getContext('2d');
         const triggerBtn = document.getElementById('ripple-trigger');
         const contentBlock = document.getElementById('content-block');
         
-        // NEW: Tiers of density. 
-        // Index 0 = HEAVY (Start of wave)
-        // Index 4 = LIGHT (End of wave)
+        // Tiered Density Characters
         const DENSITY_TIERS = [
-            ['@', '#', 'O', '0', '8', '&'],  // Heaviest
-            ['o', '*', 'x', '%', 'z'],      // Heavy
-            ['+', '=', '~', '-', '^'],      // Medium
-            ['.', ',', '\'', '`', '_']      // Lightest
+            ['@', '#', 'O', '0', '8', '&'],
+            ['o', '*', 'x', '%', 'z'],
+            ['+', '=', '~', '-', '^'],
+            ['.', ',', '\'', '`', '_']
         ];
         
         const FONT_SIZE = 14; 
@@ -225,12 +223,17 @@
                 this.age++;
                 this.radius += this.velocity;
                 if (this.velocity > 0.2) this.velocity *= this.friction;
-                if (this.age > 200) this.isDead = true;
+                
+                // ADJUSTMENT 1: Kill drop much sooner (was 200)
+                if (this.age > 100) this.isDead = true;
             }
 
             getRings() {
                 const rings = [];
-                const baseIntensity = Math.max(0, 1 - (this.age / 180)); 
+                // ADJUSTMENT 2: Fade curve is much steeper (was 180)
+                // This means it reaches 0 intensity by frame 90
+                const baseIntensity = Math.max(0, 1 - (this.age / 90)); 
+                
                 if (baseIntensity <= 0) return [];
 
                 for (let i = 0; i < 3; i++) {
@@ -239,7 +242,10 @@
                     if (r <= 0) continue;
 
                     let ringIntensity = baseIntensity * (1 - (i * 0.3));
-                    ringIntensity *= (120 / (r + 120)); 
+                    
+                    // ADJUSTMENT 3: Spatial dissipation is stronger (was 120)
+                    // As radius grows, intensity drops faster
+                    ringIntensity *= (60 / (r + 60)); 
 
                     if (ringIntensity > 0.05) {
                         rings.push({ r: r, intensity: ringIntensity });
@@ -280,10 +286,8 @@
                 const rings = drop.getRings();
 
                 rings.forEach(ring => {
-                    // 1. Determine Tier based on intensity
                     let safeIntensity = Math.max(0, Math.min(1, ring.intensity));
                     let tierIndex = Math.floor((1 - safeIntensity) * DENSITY_TIERS.length);
-                    // Clamp to safe array bounds
                     tierIndex = Math.max(0, Math.min(DENSITY_TIERS.length - 1, tierIndex));
                     
                     const charSet = DENSITY_TIERS[tierIndex];
@@ -305,9 +309,6 @@
                             continue;
                         }
                         
-                        // 2. Select specific character from the tier
-                        // We use a spatial hash so the character is stable for that coordinate
-                        // (Prevents flickering)
                         const hash = Math.floor(charX + charY);
                         const selectedChar = charSet[hash % charSet.length];
 
