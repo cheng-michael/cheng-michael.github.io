@@ -168,12 +168,13 @@
             toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
 
-        // --- CONCENTRIC WAVE PHYSICS ---
+        // --- REALISTIC FLUID PHYSICS ENGINE ---
         const canvas = document.getElementById('ascii-overlay');
         const ctx = canvas.getContext('2d');
         const triggerBtn = document.getElementById('ripple-trigger');
         const contentBlock = document.getElementById('content-block');
         
+        // Characters sorted by "density" for subtle effect
         const CHARS = ['.', '`', ',', '°', '"', '_', '-']; 
         const FONT_SIZE = 14; 
         
@@ -191,12 +192,11 @@
         window.addEventListener('resize', resize);
         resize();
 
-        class RainDrop {
+        class RealisticDrop {
             constructor() {
-                // Calculate Safe Zones
+                // 1. Position Logic (Safe Zones)
                 const rect = contentBlock.getBoundingClientRect();
                 const padding = 50; 
-                
                 const side = Math.random() > 0.5 ? 'left' : 'right';
                 
                 if (side === 'left') {
@@ -204,42 +204,81 @@
                 } else {
                     this.x = (rect.right + padding) + Math.random() * (w - (rect.right + padding));
                 }
-
                 this.y = Math.random() * h;
                 
-                this.startTime = Date.now();
-                this.speed = 0.5 + Math.random() * 0.5; // Slow expansion
-                this.lifespan = 800 + Math.random() * 600; 
-            }
+                // 2. Physics Properties
+                this.age = 0;
+                this.isDead = false;
 
-            isActive() {
-                return (Date.now() - this.startTime) < this.lifespan;
-            }
-
-            // Returns an array of rings [primary, secondary, tertiary]
-            getRings() {
-                const age = Date.now() - this.startTime;
-                const progress = age / this.lifespan;
-                const baseRadius = age * (this.speed / 10);
+                // Initial Impulse (The splash) - High speed start
+                this.velocity = 2.5 + Math.random(); 
+                // Friction (Water resistance) - Slows down over time
+                this.friction = 0.96; 
                 
-                // Fade out logic
-                const baseAlpha = Math.max(0, 0.8 * (1 - Math.pow(progress, 2)));
+                // Radius
+                this.radius = 0;
 
-                // We create 3 concentric rings per drop
-                // Ring 1: The outer edge
-                // Ring 2: 15px behind
-                // Ring 3: 30px behind
-                return [
-                    { r: baseRadius, opacity: baseAlpha },
-                    { r: baseRadius - 15, opacity: baseAlpha * 0.6 }, // Fainter
-                    { r: baseRadius - 30, opacity: baseAlpha * 0.3 }  // Very faint
-                ];
+                // Wavelength (distance between rings in the packet)
+                this.waveLength = 15 + Math.random() * 5; 
+            }
+
+            update() {
+                this.age++;
+                
+                // Apply velocity to radius
+                this.radius += this.velocity;
+                
+                // Apply drag to velocity (Deceleration)
+                if (this.velocity > 0.2) {
+                    this.velocity *= this.friction;
+                }
+
+                // Kill if too old or too faint
+                if (this.age > 200) { // Max life in frames
+                    this.isDead = true;
+                }
+            }
+
+            // Returns the renderable rings for this frame
+            getRings() {
+                const rings = [];
+                
+                // Physics: Amplitude (Height of wave) decreases as Radius increases
+                // Energy spread: 1/r relationship
+                // Also fade out by age
+                
+                const baseOpacity = Math.max(0, 1 - (this.age / 180)); // Age fade
+                if (baseOpacity <= 0) return [];
+
+                // We generate 3 rings: Leading edge, Secondary, Tertiary
+                // They share the physics of the main drop but appear at offsets
+                
+                for (let i = 0; i < 3; i++) {
+                    const offset = i * this.waveLength;
+                    const r = this.radius - offset;
+
+                    if (r <= 0) continue; // Ring hasn't formed yet
+
+                    // Calculate Opacity for this specific ring
+                    // Inner rings (i > 0) are naturally weaker
+                    let ringOpacity = baseOpacity * (1 - (i * 0.3));
+
+                    // Spatial Dissipation: The larger the ring, the fainter it gets
+                    // 100 is an arbitrary scale factor for the screen size
+                    ringOpacity *= (100 / (r + 100)); 
+
+                    if (ringOpacity > 0.05) {
+                        rings.push({ r: r, opacity: ringOpacity });
+                    }
+                }
+
+                return rings;
             }
         }
 
         function spawnBurst(count) {
             for(let i=0; i<count; i++) {
-                drops.push(new RainDrop());
+                drops.push(new RealisticDrop());
             }
         }
 
@@ -249,10 +288,10 @@
         });
 
         triggerBtn.addEventListener('mousedown', () => {
-            spawnBurst(2);
+            spawnBurst(1);
             spawnInterval = setInterval(() => {
                 spawnBurst(1); 
-            }, 100);
+            }, 150); // Slower interval for rain
         });
 
         const stopSpawning = () => {
@@ -260,10 +299,9 @@
         };
         triggerBtn.addEventListener('mouseup', stopSpawning);
         triggerBtn.addEventListener('mouseleave', stopSpawning);
-        
         triggerBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            spawnInterval = setInterval(() => spawnBurst(1), 100);
+            spawnInterval = setInterval(() => spawnBurst(1), 150);
         });
         triggerBtn.addEventListener('touchend', stopSpawning);
 
@@ -271,46 +309,43 @@
         function animate() {
             ctx.clearRect(0, 0, w, h);
 
-            if (drops.length > 0) {
-                drops = drops.filter(d => d.isActive());
+            // Filter dead drops
+            drops = drops.filter(d => !d.isDead);
 
-                drops.forEach(drop => {
-                    const rings = drop.getRings();
+            drops.forEach(drop => {
+                drop.update();
+                const rings = drop.getRings();
 
-                    // Draw each concentric ring
-                    rings.forEach(ring => {
-                        if (ring.r <= 0 || ring.opacity <= 0.01) return;
+                rings.forEach(ring => {
+                    // Density Logic: Larger rings need fewer chars to look "light"
+                    const circumference = 2 * Math.PI * ring.r;
+                    const charCount = Math.floor(circumference / (FONT_SIZE * 1.2));
+                    
+                    for (let i = 0; i < charCount; i++) {
+                        const angle = (i / charCount) * Math.PI * 2;
+                        const charX = drop.x + Math.cos(angle) * ring.r;
+                        const charY = drop.y + Math.sin(angle) * ring.r;
 
-                        const circumference = 2 * Math.PI * ring.r;
-                        // Lower density for inner rings
-                        const charCount = Math.floor(circumference / (FONT_SIZE * 1.3));
-                        
-                        for (let i = 0; i < charCount; i++) {
-                            const angle = (i / charCount) * Math.PI * 2;
-                            const charX = drop.x + Math.cos(angle) * ring.r;
-                            const charY = drop.y + Math.sin(angle) * ring.r;
+                        if (charX < 0 || charX > w || charY < 0 || charY > h) continue;
 
-                            if (charX < 0 || charX > w || charY < 0 || charY > h) continue;
-
-                            // Collision Detection
-                            const rect = contentBlock.getBoundingClientRect();
-                            if (charX > rect.left - 20 && charX < rect.right + 20 &&
-                                charY > rect.top - 20 && charY < rect.bottom + 20) {
-                                continue;
-                            }
-
-                            const charIndex = Math.floor((charX + charY) % CHARS.length);
-                            const isDark = body.classList.contains('dark-mode');
-                            
-                            ctx.fillStyle = isDark 
-                                ? `rgba(255, 255, 255, ${ring.opacity})` 
-                                : `rgba(0, 0, 0, ${ring.opacity})`;
-                            
-                            ctx.fillText(CHARS[charIndex], charX, charY);
+                        // Collision Detection
+                        const rect = contentBlock.getBoundingClientRect();
+                        if (charX > rect.left - 20 && charX < rect.right + 20 &&
+                            charY > rect.top - 20 && charY < rect.bottom + 20) {
+                            continue;
                         }
-                    });
+
+                        const charIndex = Math.floor((charX + charY) % CHARS.length);
+                        const isDark = body.classList.contains('dark-mode');
+                        
+                        ctx.fillStyle = isDark 
+                            ? `rgba(255, 255, 255, ${ring.opacity})` 
+                            : `rgba(0, 0, 0, ${ring.opacity})`;
+                        
+                        ctx.fillText(CHARS[charIndex], charX, charY);
+                    }
                 });
-            }
+            });
 
             requestAnimationFrame(animate);
         }
