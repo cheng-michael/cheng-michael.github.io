@@ -168,14 +168,14 @@
             toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
 
-        // --- REALISTIC FLUID PHYSICS ENGINE ---
+        // --- ASCII DENSITY FLUID ENGINE ---
         const canvas = document.getElementById('ascii-overlay');
         const ctx = canvas.getContext('2d');
         const triggerBtn = document.getElementById('ripple-trigger');
         const contentBlock = document.getElementById('content-block');
         
-        // Characters sorted by "density" for subtle effect
-        const CHARS = ['.', '`', ',', '°', '"', '_', '-']; 
+        // NEW: Ordered by visual density from heaviest to lightest
+        const DENSITY_CHARS = ['O', 'o', '*', '+', '=', '-', '.', '`'];
         const FONT_SIZE = 14; 
         
         let drops = [];
@@ -194,7 +194,6 @@
 
         class RealisticDrop {
             constructor() {
-                // 1. Position Logic (Safe Zones)
                 const rect = contentBlock.getBoundingClientRect();
                 const padding = 50; 
                 const side = Math.random() > 0.5 ? 'left' : 'right';
@@ -206,72 +205,41 @@
                 }
                 this.y = Math.random() * h;
                 
-                // 2. Physics Properties
                 this.age = 0;
                 this.isDead = false;
-
-                // Initial Impulse (The splash) - High speed start
                 this.velocity = 2.5 + Math.random(); 
-                // Friction (Water resistance) - Slows down over time
                 this.friction = 0.96; 
-                
-                // Radius
                 this.radius = 0;
-
-                // Wavelength (distance between rings in the packet)
                 this.waveLength = 15 + Math.random() * 5; 
             }
 
             update() {
                 this.age++;
-                
-                // Apply velocity to radius
                 this.radius += this.velocity;
-                
-                // Apply drag to velocity (Deceleration)
-                if (this.velocity > 0.2) {
-                    this.velocity *= this.friction;
-                }
-
-                // Kill if too old or too faint
-                if (this.age > 200) { // Max life in frames
-                    this.isDead = true;
-                }
+                if (this.velocity > 0.2) this.velocity *= this.friction;
+                if (this.age > 200) this.isDead = true;
             }
 
-            // Returns the renderable rings for this frame
             getRings() {
                 const rings = [];
-                
-                // Physics: Amplitude (Height of wave) decreases as Radius increases
-                // Energy spread: 1/r relationship
-                // Also fade out by age
-                
-                const baseOpacity = Math.max(0, 1 - (this.age / 180)); // Age fade
-                if (baseOpacity <= 0) return [];
+                // Intensity is now the driving factor for character selection
+                const baseIntensity = Math.max(0, 1 - (this.age / 180)); 
+                if (baseIntensity <= 0) return [];
 
-                // We generate 3 rings: Leading edge, Secondary, Tertiary
-                // They share the physics of the main drop but appear at offsets
-                
                 for (let i = 0; i < 3; i++) {
                     const offset = i * this.waveLength;
                     const r = this.radius - offset;
+                    if (r <= 0) continue;
 
-                    if (r <= 0) continue; // Ring hasn't formed yet
+                    // Calculate intensity for this specific ring
+                    let ringIntensity = baseIntensity * (1 - (i * 0.3));
+                    // Spatial dissipation
+                    ringIntensity *= (120 / (r + 120)); 
 
-                    // Calculate Opacity for this specific ring
-                    // Inner rings (i > 0) are naturally weaker
-                    let ringOpacity = baseOpacity * (1 - (i * 0.3));
-
-                    // Spatial Dissipation: The larger the ring, the fainter it gets
-                    // 100 is an arbitrary scale factor for the screen size
-                    ringOpacity *= (100 / (r + 100)); 
-
-                    if (ringOpacity > 0.05) {
-                        rings.push({ r: r, opacity: ringOpacity });
+                    if (ringIntensity > 0.05) {
+                        rings.push({ r: r, intensity: ringIntensity });
                     }
                 }
-
                 return rings;
             }
         }
@@ -283,20 +251,12 @@
         }
 
         // --- INTERACTION ---
-        triggerBtn.addEventListener('click', () => {
-            spawnBurst(3 + Math.floor(Math.random() * 3));
-        });
-
+        triggerBtn.addEventListener('click', () => { spawnBurst(3 + Math.floor(Math.random() * 3)); });
         triggerBtn.addEventListener('mousedown', () => {
             spawnBurst(1);
-            spawnInterval = setInterval(() => {
-                spawnBurst(1); 
-            }, 150); // Slower interval for rain
+            spawnInterval = setInterval(() => { spawnBurst(1); }, 150);
         });
-
-        const stopSpawning = () => {
-            clearInterval(spawnInterval);
-        };
+        const stopSpawning = () => { clearInterval(spawnInterval); };
         triggerBtn.addEventListener('mouseup', stopSpawning);
         triggerBtn.addEventListener('mouseleave', stopSpawning);
         triggerBtn.addEventListener('touchstart', (e) => {
@@ -308,8 +268,6 @@
         // --- ANIMATION ---
         function animate() {
             ctx.clearRect(0, 0, w, h);
-
-            // Filter dead drops
             drops = drops.filter(d => !d.isDead);
 
             drops.forEach(drop => {
@@ -317,7 +275,20 @@
                 const rings = drop.getRings();
 
                 rings.forEach(ring => {
-                    // Density Logic: Larger rings need fewer chars to look "light"
+                    // NEW: Map intensity to character index
+                    // Ensure intensity is clamped between 0 and 1
+                    let safeIntensity = Math.max(0, Math.min(1, ring.intensity));
+                    
+                    // Map 1.0-0.0 intensity to 0-(length-1) index
+                    let charIndex = Math.floor((1 - safeIntensity) * (DENSITY_CHARS.length - 1));
+                    // Clamp index just to be safe
+                    charIndex = Math.max(0, Math.min(DENSITY_CHARS.length - 1, charIndex));
+                    
+                    const selectedChar = DENSITY_CHARS[charIndex];
+
+                    // Hybrid Fade: If intensity is very low, also fade alpha for smoothness
+                    const alpha = safeIntensity < 0.3 ? safeIntensity * 3 : 1;
+
                     const circumference = 2 * Math.PI * ring.r;
                     const charCount = Math.floor(circumference / (FONT_SIZE * 1.2));
                     
@@ -328,21 +299,19 @@
 
                         if (charX < 0 || charX > w || charY < 0 || charY > h) continue;
 
-                        // Collision Detection
                         const rect = contentBlock.getBoundingClientRect();
                         if (charX > rect.left - 20 && charX < rect.right + 20 &&
                             charY > rect.top - 20 && charY < rect.bottom + 20) {
                             continue;
                         }
-
-                        const charIndex = Math.floor((charX + charY) % CHARS.length);
+                        
                         const isDark = body.classList.contains('dark-mode');
-                        
                         ctx.fillStyle = isDark 
-                            ? `rgba(255, 255, 255, ${ring.opacity})` 
-                            : `rgba(0, 0, 0, ${ring.opacity})`;
+                            ? `rgba(255, 255, 255, ${alpha})` 
+                            : `rgba(0, 0, 0, ${alpha})`;
                         
-                        ctx.fillText(CHARS[charIndex], charX, charY);
+                        // Draw the specific density character
+                        ctx.fillText(selectedChar, charX, charY);
                     }
                 });
             });
