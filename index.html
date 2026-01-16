@@ -26,6 +26,7 @@
         body {
             background-color: var(--bg);
             color: var(--text);
+            /* Monospace is critical for the grid alignment */
             font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
             font-size: 14px;
             line-height: 1.6;
@@ -40,8 +41,6 @@
             
             transition: background-color 0.3s, color 0.3s;
             overflow-x: hidden;
-            /* Allow selection now */
-            user-select: text; 
         }
 
         main {
@@ -49,7 +48,6 @@
             width: 100%;
             text-align: left;
             position: relative;
-            /* Ensure content sits above ripples but blends in */
             z-index: 10; 
         }
 
@@ -99,7 +97,7 @@
             padding: 0.5rem;
             opacity: 0.7;
             z-index: 20;
-            user-select: none; /* Keep buttons unselectable */
+            user-select: none;
         }
 
         .corner-btn:hover {
@@ -107,46 +105,46 @@
             opacity: 1;
         }
 
-        .corner-btn:active {
-            color: var(--headings);
-        }
-
         #theme-toggle { right: 2rem; }
         #ripple-trigger { left: 2rem; }
 
         @media (max-width: 768px) {
-            #ripple-trigger {
-                display: none;
-            }
+            #ripple-trigger { display: none; }
         }
 
-        /* DOM RIPPLE CONTAINER */
-        /* This replaces the canvas */
-        #ripple-container {
+        /* THE GRID CONTAINER */
+        #text-grid-container {
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             height: 100%;
-            pointer-events: none; /* Let clicks pass through, but allow selection */
+            pointer-events: none; /* Let clicks pass through */
             z-index: 1;
             overflow: hidden;
+            
+            /* Use Flex/Grid to organize the spans? No, absolute is faster for layout here */
         }
 
-        /* The individual ripple characters */
-        .ripple-char {
+        /* The static grid cells */
+        .grid-char {
             position: absolute;
-            pointer-events: auto; /* This makes them SELECTABLE */
+            pointer-events: auto; /* ENABLE SELECTION */
             user-select: text;
-            will-change: transform, opacity; /* optimization */
-            white-space: pre; /* preserves width of spaces if used */
+            /* Monospace metrics */
+            width: 8.4px;  /* Approx width of 14px mono char */
+            height: 22.4px; /* 14px * 1.6 line-height */
+            text-align: center;
+            opacity: 0; /* Hidden by default */
+            /* Optimization */
+            will-change: opacity, content; 
         }
 
     </style>
 </head>
 <body>
 
-    <div id="ripple-container"></div>
+    <div id="text-grid-container"></div>
 
     <main id="content-block">
         <h1>michael cheng</h1>
@@ -189,8 +187,8 @@
             toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
 
-        // --- DOM-BASED RIPPLE ENGINE ---
-        const container = document.getElementById('ripple-container');
+        // --- STATIC GRID ENGINE ---
+        const container = document.getElementById('text-grid-container');
         const triggerBtn = document.getElementById('ripple-trigger');
         const contentBlock = document.getElementById('content-block');
         
@@ -201,48 +199,96 @@
             ['.', ',', '\'', '`', '_']      
         ];
         
-        // GRID SETTINGS
+        // METRICS
+        // NOTE: These must match CSS exactly for alignment
         const FONT_SIZE = 14; 
         const LINE_HEIGHT = 1.6;
-        const CELL_HEIGHT = FONT_SIZE * LINE_HEIGHT; 
-        const CELL_WIDTH = FONT_SIZE * 0.6; 
+        const CELL_H = FONT_SIZE * LINE_HEIGHT; // 22.4
+        const CELL_W = FONT_SIZE * 0.6; // ~8.4px (Standard monospace ratio)
         
         let drops = [];
-        let w = window.innerWidth;
-        let h = window.innerHeight;
+        // The Grid: 2D array of DOM Nodes
+        let grid = []; 
+        let cols = 0;
+        let rows = 0;
         
-        // --- OBJECT POOL FOR PERFORMANCE ---
-        // Creating/deleting DOM nodes is slow. We create a pool of reusable spans.
-        const MAX_PARTICLES = 400; // Hard limit to prevent browser lag
-        const spanPool = [];
-        
-        // Initialize Pool
-        for (let i = 0; i < MAX_PARTICLES; i++) {
-            const span = document.createElement('span');
-            span.className = 'ripple-char';
-            span.style.opacity = '0'; // Hidden by default
-            container.appendChild(span);
-            spanPool.push(span);
-        }
+        // Optimization: Track which cells are currently visible to clean them up efficiently
+        let activeCells = new Set();
 
-        // CONTROL VARIABLES
+        function initGrid() {
+            // Clear existing
+            container.innerHTML = '';
+            grid = [];
+            activeCells.clear();
+
+            const w = window.innerWidth;
+            const h = window.innerHeight;
+            const contentRect = contentBlock.getBoundingClientRect();
+            
+            cols = Math.ceil(w / CELL_W);
+            rows = Math.ceil(h / CELL_H);
+            
+            // Generate spans
+            // We optimize by NOT creating spans underneath the main content text
+            // to keep the DOM lighter (saves ~30% of nodes)
+            
+            for (let y = 0; y < rows; y++) {
+                const rowArr = [];
+                const yPos = y * CELL_H;
+                
+                // Vertical collision with content block?
+                const inContentY = (yPos > contentRect.top - 20) && (yPos < contentRect.bottom + 20);
+
+                for (let x = 0; x < cols; x++) {
+                    const xPos = x * CELL_W;
+                    
+                    // Horizontal collision?
+                    const inContentX = (xPos > contentRect.left - 20) && (xPos < contentRect.right + 20);
+
+                    // If inside content block, push null (don't render rain on top of text)
+                    if (inContentY && inContentX) {
+                        rowArr.push(null);
+                        continue;
+                    }
+
+                    const span = document.createElement('span');
+                    span.className = 'grid-char';
+                    span.style.left = `${xPos}px`;
+                    span.style.top = `${yPos + (CELL_H - FONT_SIZE)/2}px`; // Vertical align correction
+                    
+                    // We attach custom data properties to the DOM node for state tracking
+                    span.dataset.active = "false"; 
+                    
+                    container.appendChild(span);
+                    rowArr.push(span);
+                }
+                grid.push(rowArr);
+            }
+        }
+        
+        // Initialize and handle resize
+        initGrid();
+        let resizeTimeout;
+        window.addEventListener('resize', () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(initGrid, 200);
+        });
+
+        // CONTROL
         let isHolding = false;
         let spawnRate = 0;          
         let maxSpawnRate = 1.5;      
         let rampUpSpeed = 0.05;      
         let rampDownSpeed = 0.02;    
 
-        window.addEventListener('resize', () => {
-            w = window.innerWidth;
-            h = window.innerHeight;
-        });
-
         class RealisticDrop {
             constructor() {
                 const rect = contentBlock.getBoundingClientRect();
                 const padding = 50; 
-                const side = Math.random() > 0.5 ? 'left' : 'right';
+                const w = window.innerWidth;
+                const h = window.innerHeight;
                 
+                const side = Math.random() > 0.5 ? 'left' : 'right';
                 if (side === 'left') {
                     this.x = Math.random() * (rect.left - padding);
                 } else {
@@ -251,13 +297,9 @@
                 this.y = Math.random() * h;
                 
                 const r = Math.random();
-                if (r < 0.60) {
-                    this.type = 'small';
-                } else if (r < 0.90) {
-                    this.type = 'medium';
-                } else {
-                    this.type = 'large';
-                }
+                if (r < 0.60) { this.type = 'small'; } 
+                else if (r < 0.90) { this.type = 'medium'; } 
+                else { this.type = 'large'; }
 
                 this.age = 0;
                 this.isDead = false;
@@ -316,9 +358,9 @@
         triggerBtn.addEventListener('mouseleave', () => { isHolding = false; });
         triggerBtn.addEventListener('click', () => { spawnRate = Math.min(spawnRate + 1, maxSpawnRate); });
 
-        // --- ANIMATION LOOP ---
+        // --- ANIMATION ---
         function animate() {
-            // 1. Logic Updates
+            // 1. Logic
             if (isHolding) {
                 if (spawnRate < maxSpawnRate) spawnRate += rampUpSpeed;
             } else {
@@ -332,21 +374,20 @@
             }
 
             drops = drops.filter(d => !d.isDead);
-            
-            // 2. Render Phase - DOM Recycling
-            let poolIndex = 0;
-            const contentRect = contentBlock.getBoundingClientRect();
-            
-            // NOTE: We don't "clear" the DOM. We just overwrite the spans we need
-            // and hide the rest at the end.
+
+            // 2. Render - "Dirty Check" Strategy
+            // Instead of looping all 5000+ grid cells, we calculate the bounds of each drop
+            // and only update cells in that area.
+
+            const nextActiveCells = new Set();
+            const w = window.innerWidth;
+            const h = window.innerHeight;
 
             drops.forEach(drop => {
                 drop.update();
                 const rings = drop.getRings();
 
                 rings.forEach(ring => {
-                    if (poolIndex >= MAX_PARTICLES) return; // Pool exhausted
-
                     let safeIntensity = Math.max(0, Math.min(1, ring.intensity));
                     let tierIndex = Math.floor((1 - safeIntensity) * DENSITY_TIERS.length);
                     tierIndex = Math.max(0, Math.min(DENSITY_TIERS.length - 1, tierIndex));
@@ -354,60 +395,59 @@
                     const charSet = DENSITY_TIERS[tierIndex];
                     const alpha = safeIntensity < 0.3 ? safeIntensity * 3 : 1;
 
-                    const circumference = 2 * Math.PI * ring.r;
-                    const steps = Math.floor(circumference / CELL_WIDTH);
-                    
-                    for (let i = 0; i < steps; i++) {
-                        if (poolIndex >= MAX_PARTICLES) break;
+                    // Calculate bounding box in GRID COORDINATES
+                    // Ring radius + margin
+                    const r = ring.r;
+                    const minCol = Math.max(0, Math.floor((drop.x - r) / CELL_W));
+                    const maxCol = Math.min(cols - 1, Math.ceil((drop.x + r) / CELL_W));
+                    const minRow = Math.max(0, Math.floor((drop.y - r) / CELL_H));
+                    const maxRow = Math.min(rows - 1, Math.ceil((drop.y + r) / CELL_H));
 
-                        const angle = (i / steps) * Math.PI * 2;
-                        
-                        // Raw coordinates
-                        const rawX = drop.x + Math.cos(angle) * ring.r;
-                        const rawY = drop.y + Math.sin(angle) * ring.r;
+                    // Iterate only the cells in this box
+                    for (let rIdx = minRow; rIdx <= maxRow; rIdx++) {
+                        for (let cIdx = minCol; cIdx <= maxCol; cIdx++) {
+                            
+                            const cell = grid[rIdx][cIdx];
+                            if (!cell) continue; // Inside content block
 
-                        // Bounds check
-                        if (rawX < 0 || rawX > w || rawY < 0 || rawY > h) continue;
+                            // Exact distance check
+                            const cellX = cIdx * CELL_W;
+                            const cellY = rIdx * CELL_H;
+                            const dx = cellX - drop.x;
+                            const dy = cellY - drop.y;
+                            const dist = Math.sqrt(dx*dx + dy*dy);
+                            
+                            // Check if this cell is actually on the ring line
+                            // We allow a "thickness" of about 1 cell width
+                            if (Math.abs(dist - ring.r) < CELL_W) {
+                                
+                                const hash = rIdx + cIdx;
+                                const char = charSet[hash % charSet.length];
+                                
+                                // Update DOM
+                                cell.textContent = char;
+                                cell.style.opacity = alpha;
+                                
+                                // Color logic
+                                const isDark = body.classList.contains('dark-mode');
+                                cell.style.color = isDark ? '#ffffff' : '#000000';
 
-                        // Collision check
-                        if (rawX > contentRect.left - 20 && rawX < contentRect.right + 20 &&
-                            rawY > contentRect.top - 20 && rawY < contentRect.bottom + 20) {
-                            continue;
+                                nextActiveCells.add(cell);
+                            }
                         }
-
-                        // GRID SNAP
-                        const col = Math.floor(rawX / CELL_WIDTH);
-                        const row = Math.floor(rawY / CELL_HEIGHT);
-                        const snappedX = col * CELL_WIDTH;
-                        const snappedY = row * CELL_HEIGHT + (CELL_HEIGHT - FONT_SIZE)/2;
-
-                        // Get a span from the pool
-                        const span = spanPool[poolIndex];
-                        poolIndex++;
-
-                        // Stable char selection
-                        const hash = col + row; 
-                        const selectedChar = charSet[hash % charSet.length];
-
-                        // Update DOM Properties
-                        // Use translate3d for GPU acceleration
-                        span.style.transform = `translate3d(${snappedX}px, ${snappedY}px, 0)`;
-                        span.textContent = selectedChar;
-                        span.style.opacity = alpha;
-                        
-                        // Handle Theme Colors via CSS variable if possible, 
-                        // but here JS is driving the color logic for simplicity
-                        const isDark = body.classList.contains('dark-mode');
-                        span.style.color = isDark ? `rgba(255, 255, 255, 1)` : `rgba(0, 0, 0, 1)`;
                     }
                 });
             });
 
-            // 3. Cleanup Phase
-            // Hide all unused spans in the pool
-            for (let i = poolIndex; i < MAX_PARTICLES; i++) {
-                spanPool[i].style.opacity = '0';
-            }
+            // 3. Cleanup
+            // Any cell that was active last frame but is NOT active this frame needs to be hidden
+            activeCells.forEach(cell => {
+                if (!nextActiveCells.has(cell)) {
+                    cell.style.opacity = '0';
+                }
+            });
+
+            activeCells = nextActiveCells;
 
             requestAnimationFrame(animate);
         }
