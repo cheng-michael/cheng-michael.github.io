@@ -8,34 +8,34 @@
         :root {
             /* LIGHT MODE */
             --bg: #ffffff;
-            --headings: #000000;       /* Pure Black */
-            --text: #555555;           /* Dark Grey */
+            --headings: #000000;
+            --text: #555555;
         }
 
         body.dark-mode {
             /* DARK MODE */
-            --bg: #111111;             /* I used #111 instead of #000 for softer contrast */
-            --headings: #ffffff;       /* Pure White */
-            --text: #a0a0a0;           /* Light Grey */
+            --bg: #111111;
+            --headings: #ffffff;
+            --text: #a0a0a0;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
 
         body {
             background-color: var(--bg);
-            color: var(--text);        /* Applies grey to all body text by default */
+            color: var(--text);
             font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
             font-size: 14px;
             line-height: 1.6;
             text-transform: lowercase;
             
-            /* Center the block vertically and horizontally */
             display: flex;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             min-height: 100vh;
             padding: 2rem;
+            overflow-x: hidden; /* Prevent scrollbars during wave */
             
             transition: background-color 0.3s, color 0.3s;
         }
@@ -43,11 +43,20 @@
         main {
             max-width: 520px;
             width: 100%;
-            text-align: left; /* Text inside the block stays left-aligned */
+            text-align: left;
+            position: relative;
+            z-index: 1;
+        }
+
+        /* Essential for the wave effect: makes spans display inline but transformable */
+        .char {
+            display: inline-block;
+            position: relative;
+            white-space: pre; /* Preserves spaces */
         }
 
         h1 {
-            color: var(--headings); /* This forces the headline to be Black/White */
+            color: var(--headings);
             font-size: 14px;
             font-weight: normal;
             margin-bottom: 2rem;
@@ -74,15 +83,21 @@
         }
 
         a:hover {
-            color: var(--headings); /* On hover, link turns Black/White for effect */
+            color: var(--headings);
             text-decoration-style: double;
         }
 
-        /* Toggle Button */
-        #theme-toggle {
+        /* CONTROLS CONTAINER (Bottom Right) */
+        .controls {
             position: fixed;
             bottom: 2rem;
             right: 2rem;
+            display: flex;
+            gap: 1.5rem; /* Space between buttons */
+            z-index: 10;
+        }
+
+        .btn {
             background: none;
             border: none;
             color: var(--text);
@@ -92,17 +107,23 @@
             text-decoration: underline;
             padding: 0.5rem;
             opacity: 0.7;
+            user-select: none; /* Prevents text selection while holding */
         }
 
-        #theme-toggle:hover {
+        .btn:hover, .btn:active {
             color: var(--headings);
             opacity: 1;
+        }
+        
+        /* Active state for ripple button to show it's working */
+        .btn:active {
+            text-decoration-style: double;
         }
     </style>
 </head>
 <body>
 
-    <main>
+    <main id="content">
         <h1>michael cheng</h1>
 
         <p>
@@ -126,9 +147,13 @@
         </p>
     </main>
 
-    <button id="theme-toggle">dark</button>
+    <div class="controls">
+        <button id="ripple-btn" class="btn">ripple</button>
+        <button id="theme-toggle" class="btn">dark</button>
+    </div>
 
     <script>
+        // --- 1. THEME TOGGLE LOGIC ---
         const toggleButton = document.getElementById('theme-toggle');
         const body = document.body;
 
@@ -139,12 +164,97 @@
 
         toggleButton.addEventListener('click', () => {
             body.classList.toggle('dark-mode');
-            if (body.classList.contains('dark-mode')) {
-                toggleButton.textContent = 'light';
-            } else {
-                toggleButton.textContent = 'dark';
-            }
+            toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
+
+        // --- 2. RIPPLE EFFECT LOGIC ---
+        const content = document.getElementById('content');
+        const rippleBtn = document.getElementById('ripple-btn');
+        let isRippling = false;
+        let time = 0;
+        let animationFrame;
+
+        // Step A: Split all text into individual <span> characters
+        function splitTextToSpans(element) {
+            if (element.nodeType === 3) { // Text node
+                const text = element.nodeValue;
+                const parent = element.parentNode;
+                const chars = text.split('').map(char => {
+                    const span = document.createElement('span');
+                    span.textContent = char;
+                    span.className = 'char';
+                    return span;
+                });
+                // Replace text node with spans
+                chars.forEach(span => parent.insertBefore(span, element));
+                parent.removeChild(element);
+            } else if (element.nodeType === 1) { // Element node
+                // Recursively split children (converting collection to array to avoid live list issues)
+                Array.from(element.childNodes).forEach(splitTextToSpans);
+            }
+        }
+
+        // Run the split once on load
+        splitTextToSpans(content);
+        
+        // Cache all characters for performance
+        const allChars = document.querySelectorAll('.char');
+
+        // Step B: The Physics Loop
+        function animateRipple() {
+            if (!isRippling) {
+                // Reset positions smoothly when stopped
+                allChars.forEach(char => {
+                    char.style.transform = `translateY(0px)`;
+                });
+                return; 
+            }
+
+            time += 0.1; // Speed of the wave
+            
+            // We'll ripple from the center of the screen
+            const centerX = window.innerWidth / 2;
+            const centerY = window.innerHeight / 2;
+
+            allChars.forEach(char => {
+                const rect = char.getBoundingClientRect();
+                const charX = rect.left + (rect.width / 2);
+                const charY = rect.top + (rect.height / 2);
+
+                // Calculate distance from center
+                const dist = Math.sqrt(Math.pow(charX - centerX, 2) + Math.pow(charY - centerY, 2));
+
+                // The Magic Formula: Sine wave based on distance and time
+                // Dist/50 controls wavelength (width of ripples)
+                // * 10 controls amplitude (height of ripples)
+                const y = Math.sin((dist / 40) - time) * 10;
+
+                char.style.transform = `translateY(${y}px)`;
+            });
+
+            requestAnimationFrame(animateRipple);
+        }
+
+        // Step C: Button Events (Hold to Ripple)
+        const startRipple = () => {
+            if (!isRippling) {
+                isRippling = true;
+                animateRipple();
+            }
+        };
+
+        const stopRipple = () => {
+            isRippling = false;
+        };
+
+        // Mouse Events
+        rippleBtn.addEventListener('mousedown', startRipple);
+        window.addEventListener('mouseup', stopRipple);
+        
+        // Touch Events (for mobile)
+        rippleBtn.addEventListener('touchstart', (e) => { e.preventDefault(); startRipple(); });
+        window.addEventListener('touchend', stopRipple);
+
     </script>
 </body>
 </html>
