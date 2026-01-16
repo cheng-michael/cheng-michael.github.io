@@ -10,7 +10,7 @@
             --bg: #ffffff;
             --headings: #000000;
             --text: #555555;
-            --effect: rgba(0, 0, 0, 0.15); /* Color of the ripples */
+            --btn-active: #000000;
         }
 
         body.dark-mode {
@@ -18,7 +18,7 @@
             --bg: #111111;
             --headings: #ffffff;
             --text: #a0a0a0;
-            --effect: rgba(255, 255, 255, 0.15);
+            --btn-active: #ffffff;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -31,7 +31,6 @@
             line-height: 1.6;
             text-transform: lowercase;
             
-            /* Center Layout */
             display: flex;
             flex-direction: column;
             align-items: center;
@@ -40,26 +39,16 @@
             padding: 2rem;
             
             transition: background-color 0.3s, color 0.3s;
-            overflow: hidden; /* Prevents scrollbars when effects hit edges */
+            overflow-x: hidden; /* Prevent scrollbars from the effect */
         }
 
-        /* The Background Canvas for Effects */
-        #canvas-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1; /* Behind text */
-            pointer-events: none; /* Ignore clicks */
-        }
-
+        /* The Content Block */
         main {
             max-width: 520px;
             width: 100%;
             text-align: left;
             position: relative;
-            z-index: 1; /* Above canvas */
+            z-index: 10; /* Keeps text above the effect if we want, but we will mask it anyway */
         }
 
         h1 {
@@ -94,8 +83,8 @@
             text-decoration-style: double;
         }
 
-        /* CONTROLS (Bottom Corners) */
-        .control-btn {
+        /* BUTTONS (Theme Toggle & Ripple Trigger) */
+        .corner-btn {
             position: fixed;
             bottom: 2rem;
             background: none;
@@ -107,27 +96,37 @@
             text-decoration: underline;
             padding: 0.5rem;
             opacity: 0.7;
-            z-index: 10;
-            user-select: none;
+            z-index: 20; /* Above everything */
         }
 
-        .control-btn:hover, .control-btn:active {
+        .corner-btn:hover {
             color: var(--headings);
             opacity: 1;
         }
 
-        /* Right: Dark Mode */
+        /* Right Corner */
         #theme-toggle { right: 2rem; }
 
-        /* Left: Flux Effect */
-        #flux-btn { left: 2rem; }
+        /* Left Corner (New) */
+        #ripple-trigger { left: 2rem; }
+
+        /* THE ASCII CANVAS LAYER */
+        canvas#ascii-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            pointer-events: none; /* Lets clicks pass through to links */
+            z-index: 1; /* Sits above background but below buttons */
+        }
     </style>
 </head>
 <body>
 
-    <canvas id="canvas-bg"></canvas>
+    <canvas id="ascii-overlay"></canvas>
 
-    <main>
+    <main id="content-block">
         <h1>michael cheng</h1>
 
         <p>
@@ -151,12 +150,11 @@
         </p>
     </main>
 
-    <button id="flux-btn" class="control-btn">flux</button>
-    
-    <button id="theme-toggle" class="control-btn">dark</button>
+    <button id="ripple-trigger" class="corner-btn">effect</button>
+    <button id="theme-toggle" class="corner-btn">dark</button>
 
     <script>
-        // --- THEME LOGIC ---
+        // --- 1. THEME TOGGLE LOGIC ---
         const toggleButton = document.getElementById('theme-toggle');
         const body = document.body;
 
@@ -170,139 +168,143 @@
             toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
 
-        // --- EFFECT LOGIC (CANVAS) ---
-        const canvas = document.getElementById('canvas-bg');
-        const ctx = canvas.getContext('2d');
-        const fluxBtn = document.getElementById('flux-btn');
-        
-        let width, height;
-        let isHolding = false;
-        let ripples = [];
-        let asciiDrops = [];
-        const chars = "01.:+x-="; // The ASCII palette
 
-        // Handle Retina Displays
+        // --- 2. ASCII RIPPLE PHYSICS ENGINE ---
+        const canvas = document.getElementById('ascii-overlay');
+        const ctx = canvas.getContext('2d');
+        const triggerBtn = document.getElementById('ripple-trigger');
+        const contentBlock = document.getElementById('content-block');
+        
+        // Configuration
+        const CHARS = ['.', '+', '*', '~', '°', 'x', 'o'];
+        const FONT_SIZE = 14; // Matches your body text
+        const SPEED = 4; // Expansion speed
+        const WAVE_WIDTH = 100; // Thickness of the ripple band
+        const RIPPLE_DURATION = 2000; // How long a ripple lasts (ms)
+
+        let ripples = []; // Store active ripples
+        let w, h;
+
+        // Resize canvas to fill screen
         function resize() {
-            width = window.innerWidth;
-            height = window.innerHeight;
-            canvas.width = width * window.devicePixelRatio;
-            canvas.height = height * window.devicePixelRatio;
-            ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+            w = canvas.width = window.innerWidth;
+            h = canvas.height = window.innerHeight;
+            ctx.font = `${FONT_SIZE}px Menlo, Monaco, Consolas, monospace`;
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
         }
         window.addEventListener('resize', resize);
         resize();
 
-        // Interaction Listeners
-        const startEffect = (e) => { 
-            // prevent default to stop text selection on mobile
-            if(e.type === 'touchstart') e.preventDefault(); 
-            isHolding = true; 
-        };
-        const stopEffect = () => { isHolding = false; };
-
-        fluxBtn.addEventListener('mousedown', startEffect);
-        fluxBtn.addEventListener('touchstart', startEffect);
-        
-        window.addEventListener('mouseup', stopEffect);
-        window.addEventListener('touchend', stopEffect);
-
-        // Get current color from CSS variable
-        function getEffectColor() {
-            const style = getComputedStyle(document.body);
-            return style.getPropertyValue('--headings').trim();
-        }
-
-        // --- ANIMATION CLASSES ---
-
+        // The Ripple Class
         class Ripple {
-            constructor() {
-                this.x = Math.random() * width;
-                this.y = Math.random() * height;
-                this.radius = 0;
-                this.maxRadius = Math.random() * 100 + 50;
-                this.speed = Math.random() * 2 + 1;
-                this.opacity = 1;
+            constructor(x, y) {
+                this.x = x;
+                this.y = y;
+                this.startTime = Date.now();
+                this.maxRadius = Math.max(w, h) * 1.5; // Enough to cover screen
             }
 
-            update() {
-                this.radius += this.speed;
-                this.opacity -= 0.015; // Fade out speed
+            isActive() {
+                return (Date.now() - this.startTime) < RIPPLE_DURATION;
             }
 
-            draw() {
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
-                ctx.strokeStyle = getEffectColor();
-                ctx.globalAlpha = this.opacity * 0.2; // Keep it subtle
-                ctx.stroke();
-                ctx.globalAlpha = 1;
+            getRadius() {
+                const age = Date.now() - this.startTime;
+                return age * (SPEED / 10) * 2; // Simple linear expansion
             }
         }
 
-        class AsciiDrop {
-            constructor(side) {
-                // side: 'left' or 'right'
-                this.x = side === 'left' 
-                    ? Math.random() * 50 // 0-50px from left
-                    : width - (Math.random() * 50); // 0-50px from right
-                this.y = -20;
-                this.char = chars[Math.floor(Math.random() * chars.length)];
-                this.speed = Math.random() * 3 + 2;
-                this.fontSize = Math.random() * 14 + 10;
-                this.opacity = 1;
-            }
+        // Trigger on Click
+        triggerBtn.addEventListener('click', (e) => {
+            // Spawn ripple from the button's position
+            const rect = triggerBtn.getBoundingClientRect();
+            const startX = rect.left + rect.width / 2;
+            const startY = rect.top + rect.height / 2;
+            ripples.push(new Ripple(startX, startY));
+        });
 
-            update() {
-                this.y += this.speed;
-                if (this.y > height) this.opacity = 0;
-            }
+        // Also trigger on hold (mousedown/mouseup loop) if desired, 
+        // but for now simple click spamming works best for "water" feel.
 
-            draw() {
-                ctx.font = `${this.fontSize}px monospace`;
-                ctx.fillStyle = getEffectColor();
-                ctx.globalAlpha = this.opacity * 0.4;
-                ctx.fillText(this.char, this.x, this.y);
-                ctx.globalAlpha = 1;
-            }
-        }
-
-        // --- MAIN LOOP ---
+        // The Animation Loop
         function animate() {
-            ctx.clearRect(0, 0, width, height);
+            ctx.clearRect(0, 0, w, h);
 
-            // 1. Spawn new particles if holding
-            if (isHolding) {
-                // Spawn Ripples
-                if (Math.random() < 0.2) { // 20% chance per frame
-                    ripples.push(new Ripple());
+            // Get "Forbidden Zone" (The content block)
+            const contentRect = contentBlock.getBoundingClientRect();
+            // Add a little padding to the forbidden zone
+            const pad = 20; 
+            const forbidden = {
+                left: contentRect.left - pad,
+                right: contentRect.right + pad,
+                top: contentRect.top - pad,
+                bottom: contentRect.bottom + pad
+            };
+
+            // Only calculate grid if there are active ripples
+            if (ripples.length > 0) {
+                // Remove old ripples
+                ripples = ripples.filter(r => r.isActive());
+
+                // Iterate over a grid of the screen
+                // We skip steps equal to FONT_SIZE to create a "text grid"
+                for (let y = 0; y < h; y += FONT_SIZE) {
+                    for (let x = 0; x < w; x += FONT_SIZE * 0.6) { // 0.6 aspect ratio correction for monospace width
+                        
+                        // 1. COLLISION CHECK: If inside content, skip immediately
+                        if (x > forbidden.left && x < forbidden.right && 
+                            y > forbidden.top && y < forbidden.bottom) {
+                            continue;
+                        }
+
+                        // 2. CHECK RIPPLES
+                        let totalIntensity = 0;
+
+                        for (let r of ripples) {
+                            const dx = x - r.x;
+                            const dy = y - r.y;
+                            const dist = Math.sqrt(dx * dx + dy * dy);
+                            const currentRadius = r.getRadius();
+
+                            // The "Wave" Logic:
+                            // We want characters to appear only in a specific band (currentRadius +/- width)
+                            // We use a sine wave to make them fade in/out smoothly within that band
+                            const distFromWave = Math.abs(dist - currentRadius);
+                            
+                            if (distFromWave < WAVE_WIDTH) {
+                                // Map distance to an intensity (0 to 1)
+                                // Closer to the exact radius = more intense
+                                const intensity = Math.cos((distFromWave / WAVE_WIDTH) * (Math.PI / 2));
+                                totalIntensity += intensity;
+                            }
+                        }
+
+                        // 3. DRAW
+                        if (totalIntensity > 0.1) {
+                            // Cap intensity at 1
+                            const alpha = Math.min(totalIntensity, 1);
+                            
+                            // Pick a character based on location (pseudo-random but stable)
+                            // This makes the "water" feel structured rather than chaotic static
+                            const charIndex = Math.floor((x + y + Date.now()/100) % CHARS.length);
+                            
+                            // Color Logic based on theme
+                            const isDark = body.classList.contains('dark-mode');
+                            const color = isDark ? `rgba(255, 255, 255, ${alpha})` : `rgba(0, 0, 0, ${alpha})`;
+
+                            ctx.fillStyle = color;
+                            ctx.fillText(CHARS[charIndex], x, y);
+                        }
+                    }
                 }
-                // Spawn ASCII (Left and Right)
-                if (Math.random() < 0.5) {
-                    asciiDrops.push(new AsciiDrop('left'));
-                    asciiDrops.push(new AsciiDrop('right'));
-                }
-            }
-
-            // 2. Update & Draw Ripples
-            for (let i = ripples.length - 1; i >= 0; i--) {
-                const r = ripples[i];
-                r.update();
-                r.draw();
-                if (r.opacity <= 0) ripples.splice(i, 1);
-            }
-
-            // 3. Update & Draw ASCII
-            for (let i = asciiDrops.length - 1; i >= 0; i--) {
-                const a = asciiDrops[i];
-                a.update();
-                a.draw();
-                if (a.opacity <= 0 || a.y > height) asciiDrops.splice(i, 1);
             }
 
             requestAnimationFrame(animate);
         }
 
         animate();
+
     </script>
 </body>
 </html>
