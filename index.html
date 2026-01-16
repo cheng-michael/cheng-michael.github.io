@@ -78,9 +78,10 @@
             transition: color 0.2s;
         }
 
+        /* FIXED: Hover no longer creates a double line, just changes color */
         a:hover {
             color: var(--headings);
-            text-decoration-style: double;
+            text-decoration: underline; 
         }
 
         /* BUTTONS */
@@ -106,11 +107,17 @@
 
         .corner-btn:active {
             color: var(--headings);
-            text-decoration-style: double;
         }
 
         #theme-toggle { right: 2rem; }
         #ripple-trigger { left: 2rem; }
+
+        /* FIXED: Hide Rain button on Mobile */
+        @media (max-width: 768px) {
+            #ripple-trigger {
+                display: none;
+            }
+        }
 
         canvas#ascii-overlay {
             position: fixed;
@@ -151,7 +158,7 @@
         </p>
     </main>
 
-    <button id="ripple-trigger" class="corner-btn">effect</button>
+    <button id="ripple-trigger" class="corner-btn">rain</button>
     <button id="theme-toggle" class="corner-btn">dark</button>
 
     <script>
@@ -168,7 +175,7 @@
             toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
 
-        // --- ASCII FLUID ENGINE v6 (Ramp-Up Accelerator) ---
+        // --- ASCII FLUID ENGINE v7 (Adjusted Quantities) ---
         const canvas = document.getElementById('ascii-overlay');
         const ctx = canvas.getContext('2d');
         const triggerBtn = document.getElementById('ripple-trigger');
@@ -188,10 +195,14 @@
         
         // ACCELERATOR VARIABLES
         let isHolding = false;
-        let spawnRate = 0;          // Current "energy" (0 to 100)
-        let maxSpawnRate = 15;      // Max energy cap
-        let rampUpSpeed = 0.5;      // How fast it speeds up
-        let rampDownSpeed = 0.2;    // How fast it slows down (tapers off)
+        let spawnRate = 0;          
+        
+        // ADJUSTMENT: Drastically reduced Max Rate.
+        // 1.5 means roughly 15% chance per frame => ~9 drops per second max
+        let maxSpawnRate = 1.5;      
+        
+        let rampUpSpeed = 0.05;      // Slower ramp up
+        let rampDownSpeed = 0.02;    // Slower taper off
 
         function resize() {
             w = canvas.width = window.innerWidth;
@@ -284,15 +295,9 @@
         triggerBtn.addEventListener('mouseup', () => { isHolding = false; });
         triggerBtn.addEventListener('mouseleave', () => { isHolding = false; });
         
-        triggerBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            isHolding = true; 
-        });
-        triggerBtn.addEventListener('touchend', () => { isHolding = false; });
-        
-        // Single click gives a small nudge to the spawn rate
         triggerBtn.addEventListener('click', () => {
-            spawnRate += 2; // Jumpstart
+            // Tiny boost on click
+            spawnRate = Math.min(spawnRate + 1, maxSpawnRate); 
         });
 
         // --- ANIMATION ---
@@ -301,36 +306,24 @@
             
             // 1. RATE CONTROLLER
             if (isHolding) {
-                // Accelerate
                 if (spawnRate < maxSpawnRate) {
                     spawnRate += rampUpSpeed;
                 }
             } else {
-                // Decelerate (Coast to stop)
                 if (spawnRate > 0) {
                     spawnRate -= rampDownSpeed;
                 }
             }
             
-            // Hard floor at 0
             if (spawnRate < 0) spawnRate = 0;
 
             // 2. SPAWNER
-            // spawnRate is roughly "drops per frame probability" * 10
-            // e.g. spawnRate 10 = high chance, 1 = low chance
             if (spawnRate > 0) {
-                // Determine how many to spawn this frame
-                // We use a random chance based on the current rate
+                // Determine spawn chance based on rate (0 to 10 scale)
                 const chance = Math.random() * 10;
                 
                 if (chance < spawnRate) {
-                    // Spawn 1 drop
                     drops.push(new RealisticDrop());
-                    
-                    // If rate is really high, maybe spawn a second one
-                    if (spawnRate > 10 && Math.random() > 0.5) {
-                         drops.push(new RealisticDrop());
-                    }
                 }
             }
 
