@@ -39,7 +39,9 @@
             padding: 2rem;
             
             transition: background-color 0.3s, color 0.3s;
-            overflow-x: hidden; /* Prevent scrollbars from the effect */
+            overflow-x: hidden;
+            /* Disable selection so holding the button doesn't highlight text */
+            user-select: none; 
         }
 
         /* The Content Block */
@@ -48,7 +50,7 @@
             width: 100%;
             text-align: left;
             position: relative;
-            z-index: 10; /* Keeps text above the effect if we want, but we will mask it anyway */
+            z-index: 10; 
         }
 
         h1 {
@@ -83,7 +85,7 @@
             text-decoration-style: double;
         }
 
-        /* BUTTONS (Theme Toggle & Ripple Trigger) */
+        /* BUTTONS */
         .corner-btn {
             position: fixed;
             bottom: 2rem;
@@ -96,7 +98,7 @@
             text-decoration: underline;
             padding: 0.5rem;
             opacity: 0.7;
-            z-index: 20; /* Above everything */
+            z-index: 20;
         }
 
         .corner-btn:hover {
@@ -104,21 +106,24 @@
             opacity: 1;
         }
 
-        /* Right Corner */
-        #theme-toggle { right: 2rem; }
+        /* Active state for the effect button */
+        .corner-btn:active {
+            color: var(--headings);
+            text-decoration-style: double;
+        }
 
-        /* Left Corner (New) */
+        #theme-toggle { right: 2rem; }
         #ripple-trigger { left: 2rem; }
 
-        /* THE ASCII CANVAS LAYER */
+        /* CANVAS LAYER */
         canvas#ascii-overlay {
             position: fixed;
             top: 0;
             left: 0;
             width: 100vw;
             height: 100vh;
-            pointer-events: none; /* Lets clicks pass through to links */
-            z-index: 1; /* Sits above background but below buttons */
+            pointer-events: none;
+            z-index: 1;
         }
     </style>
 </head>
@@ -154,7 +159,7 @@
     <button id="theme-toggle" class="corner-btn">dark</button>
 
     <script>
-        // --- 1. THEME TOGGLE LOGIC ---
+        // --- THEME TOGGLE ---
         const toggleButton = document.getElementById('theme-toggle');
         const body = document.body;
 
@@ -168,24 +173,21 @@
             toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
 
-
-        // --- 2. ASCII RIPPLE PHYSICS ENGINE ---
+        // --- ASCII PARTICLE PHYSICS ---
         const canvas = document.getElementById('ascii-overlay');
         const ctx = canvas.getContext('2d');
         const triggerBtn = document.getElementById('ripple-trigger');
         const contentBlock = document.getElementById('content-block');
         
-        // Configuration
-        const CHARS = ['.', '+', '*', '~', '°', 'x', 'o'];
-        const FONT_SIZE = 14; // Matches your body text
-        const SPEED = 4; // Expansion speed
-        const WAVE_WIDTH = 100; // Thickness of the ripple band
-        const RIPPLE_DURATION = 2000; // How long a ripple lasts (ms)
-
-        let ripples = []; // Store active ripples
+        // Settings
+        const CHARS = ['.', '+', '*', '°', 'x', '~', '-'];
+        const FONT_SIZE = 14; 
+        
+        let ripples = [];
         let w, h;
+        let isHolding = false; // Tracks if mouse is down
+        let spawnInterval; // Timer for holding down button
 
-        // Resize canvas to fill screen
         function resize() {
             w = canvas.width = window.innerWidth;
             h = canvas.height = window.innerHeight;
@@ -196,108 +198,145 @@
         window.addEventListener('resize', resize);
         resize();
 
-        // The Ripple Class
-        class Ripple {
-            constructor(x, y) {
-                this.x = x;
-                this.y = y;
+        class SmallRipple {
+            constructor() {
+                // 1. Calculate Safe Zones (Left and Right of content)
+                const rect = contentBlock.getBoundingClientRect();
+                const padding = 40; // Space away from text
+                
+                // Randomly decide: Left side OR Right side?
+                const side = Math.random() > 0.5 ? 'left' : 'right';
+                
+                if (side === 'left') {
+                    // Spawn anywhere from 0 to (rect.left - padding)
+                    this.x = Math.random() * (rect.left - padding);
+                } else {
+                    // Spawn anywhere from (rect.right + padding) to Screen Width
+                    this.x = (rect.right + padding) + Math.random() * (w - (rect.right + padding));
+                }
+
+                this.y = Math.random() * h; // Any height
+                
+                // Physics properties
                 this.startTime = Date.now();
-                this.maxRadius = Math.max(w, h) * 1.5; // Enough to cover screen
+                this.speed = 2 + Math.random() * 3; // Random expansion speed
+                this.maxRadius = 50 + Math.random() * 100; // Random size (small to medium)
+                this.lifespan = 1000 + Math.random() * 1000; // How long it lives (ms)
             }
 
             isActive() {
-                return (Date.now() - this.startTime) < RIPPLE_DURATION;
+                return (Date.now() - this.startTime) < this.lifespan;
             }
 
-            getRadius() {
+            getCurrentState() {
                 const age = Date.now() - this.startTime;
-                return age * (SPEED / 10) * 2; // Simple linear expansion
+                const progress = age / this.lifespan; // 0.0 to 1.0
+                
+                // Radius grows
+                const radius = age * (this.speed / 10);
+                
+                // Opacity fades out as it gets older
+                // (1 - progress) means it starts at 1 and goes to 0
+                const alpha = Math.max(0, 1 - progress); 
+
+                return { radius, alpha };
             }
         }
 
-        // Trigger on Click
-        triggerBtn.addEventListener('click', (e) => {
-            // Spawn ripple from the button's position
-            const rect = triggerBtn.getBoundingClientRect();
-            const startX = rect.left + rect.width / 2;
-            const startY = rect.top + rect.height / 2;
-            ripples.push(new Ripple(startX, startY));
+        function spawnBurst(count) {
+            for(let i=0; i<count; i++) {
+                ripples.push(new SmallRipple());
+            }
+        }
+
+        // --- INTERACTION HANDLERS ---
+        
+        // 1. Simple Click (Burst)
+        triggerBtn.addEventListener('click', () => {
+            spawnBurst(15);
         });
 
-        // Also trigger on hold (mousedown/mouseup loop) if desired, 
-        // but for now simple click spamming works best for "water" feel.
+        // 2. Mouse Down (Start continuous rain)
+        triggerBtn.addEventListener('mousedown', () => {
+            isHolding = true;
+            spawnBurst(5); // Immediate feedback
+            spawnInterval = setInterval(() => {
+                spawnBurst(2); // Add a few every 50ms
+            }, 50);
+        });
 
-        // The Animation Loop
+        // 3. Mouse Up/Leave (Stop rain)
+        const stopSpawning = () => {
+            isHolding = false;
+            clearInterval(spawnInterval);
+        };
+        triggerBtn.addEventListener('mouseup', stopSpawning);
+        triggerBtn.addEventListener('mouseleave', stopSpawning);
+        
+        // Also support Touch for mobile
+        triggerBtn.addEventListener('touchstart', (e) => {
+            e.preventDefault(); // Stop zoom
+            isHolding = true;
+            spawnInterval = setInterval(() => spawnBurst(2), 50);
+        });
+        triggerBtn.addEventListener('touchend', stopSpawning);
+
+
+        // --- ANIMATION LOOP ---
         function animate() {
             ctx.clearRect(0, 0, w, h);
 
-            // Get "Forbidden Zone" (The content block)
-            const contentRect = contentBlock.getBoundingClientRect();
-            // Add a little padding to the forbidden zone
-            const pad = 20; 
-            const forbidden = {
-                left: contentRect.left - pad,
-                right: contentRect.right + pad,
-                top: contentRect.top - pad,
-                bottom: contentRect.bottom + pad
-            };
-
-            // Only calculate grid if there are active ripples
             if (ripples.length > 0) {
-                // Remove old ripples
+                // Filter out dead ripples
                 ripples = ripples.filter(r => r.isActive());
 
-                // Iterate over a grid of the screen
-                // We skip steps equal to FONT_SIZE to create a "text grid"
-                for (let y = 0; y < h; y += FONT_SIZE) {
-                    for (let x = 0; x < w; x += FONT_SIZE * 0.6) { // 0.6 aspect ratio correction for monospace width
-                        
-                        // 1. COLLISION CHECK: If inside content, skip immediately
-                        if (x > forbidden.left && x < forbidden.right && 
-                            y > forbidden.top && y < forbidden.bottom) {
+                // We only scan the grid where we know ripples exist to save performance
+                // But for simplicity on this scale, we scan the whole screen with a coarser step
+                // Optimization: Only draw characters if they are near a ripple ring
+                
+                // Iterate over active ripples to draw them
+                // NOTE: This approach is slightly different from the previous one. 
+                // Instead of iterating pixels, we iterate ripples -> then iterate ring circumference.
+                // This is much more efficient for "small" scattered ripples.
+
+                ripples.forEach(r => {
+                    const { radius, alpha } = r.getCurrentState();
+                    
+                    if (alpha <= 0.01) return;
+
+                    // Draw characters along the circumference of the circle
+                    // Circumference = 2 * pi * r
+                    // We want a character every ~15px
+                    const circumference = 2 * Math.PI * radius;
+                    const charCount = Math.floor(circumference / (FONT_SIZE * 0.8));
+                    
+                    for (let i = 0; i < charCount; i++) {
+                        const angle = (i / charCount) * Math.PI * 2;
+                        const charX = r.x + Math.cos(angle) * radius;
+                        const charY = r.y + Math.sin(angle) * radius;
+
+                        // Check canvas bounds
+                        if (charX < 0 || charX > w || charY < 0 || charY > h) continue;
+
+                        // Double check collision (redundant but safe)
+                        // If the ripple expands INTO the text area, don't draw that specific character
+                        const rect = contentBlock.getBoundingClientRect();
+                        if (charX > rect.left - 20 && charX < rect.right + 20 &&
+                            charY > rect.top - 20 && charY < rect.bottom + 20) {
                             continue;
                         }
 
-                        // 2. CHECK RIPPLES
-                        let totalIntensity = 0;
-
-                        for (let r of ripples) {
-                            const dx = x - r.x;
-                            const dy = y - r.y;
-                            const dist = Math.sqrt(dx * dx + dy * dy);
-                            const currentRadius = r.getRadius();
-
-                            // The "Wave" Logic:
-                            // We want characters to appear only in a specific band (currentRadius +/- width)
-                            // We use a sine wave to make them fade in/out smoothly within that band
-                            const distFromWave = Math.abs(dist - currentRadius);
-                            
-                            if (distFromWave < WAVE_WIDTH) {
-                                // Map distance to an intensity (0 to 1)
-                                // Closer to the exact radius = more intense
-                                const intensity = Math.cos((distFromWave / WAVE_WIDTH) * (Math.PI / 2));
-                                totalIntensity += intensity;
-                            }
-                        }
-
-                        // 3. DRAW
-                        if (totalIntensity > 0.1) {
-                            // Cap intensity at 1
-                            const alpha = Math.min(totalIntensity, 1);
-                            
-                            // Pick a character based on location (pseudo-random but stable)
-                            // This makes the "water" feel structured rather than chaotic static
-                            const charIndex = Math.floor((x + y + Date.now()/100) % CHARS.length);
-                            
-                            // Color Logic based on theme
-                            const isDark = body.classList.contains('dark-mode');
-                            const color = isDark ? `rgba(255, 255, 255, ${alpha})` : `rgba(0, 0, 0, ${alpha})`;
-
-                            ctx.fillStyle = color;
-                            ctx.fillText(CHARS[charIndex], x, y);
-                        }
+                        // Draw
+                        const charIndex = Math.floor((charX + charY) % CHARS.length);
+                        const isDark = body.classList.contains('dark-mode');
+                        
+                        ctx.fillStyle = isDark 
+                            ? `rgba(255, 255, 255, ${alpha})` 
+                            : `rgba(0, 0, 0, ${alpha})`;
+                        
+                        ctx.fillText(CHARS[charIndex], charX, charY);
                     }
-                }
+                });
             }
 
             requestAnimationFrame(animate);
