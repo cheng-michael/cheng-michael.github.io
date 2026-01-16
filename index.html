@@ -3,25 +3,17 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Michael Cheng</title>
+    <title>michael cheng</title>
     <style>
         :root {
-            /* The Eggert.xyz / Academic aesthetic:
-               - Pure black and white (no grays).
-               - Monospace font.
-               - Uniform text size.
-            */
+            /* light mode default */
             --bg: #ffffff;
             --fg: #000000;
-            --link: #0000ee; /* The standard "internet blue" usually found on academic sites */
         }
 
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg: #121212;
-                --fg: #e0e0e0;
-                --link: #8ab4f8; 
-            }
+        body.dark-mode {
+            --bg: #000000;
+            --fg: #ffffff;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -29,88 +21,125 @@
         body {
             background-color: var(--bg);
             color: var(--fg);
-            /* The Monospace Stack */
             font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
-            /* Uniform size for the whole page */
-            font-size: 14px; 
-            line-height: 1.5;
-            padding: 40px;
-            max-width: 680px; /* Reading width */
+            font-size: 14px;
+            line-height: 1.6;
+            text-transform: lowercase; /* forces all text to lowercase */
+            
+            /* centering layout */
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            text-align: center;
+            transition: background-color 0.3s, color 0.3s;
         }
 
-        /* The Name: Only slightly distinct */
+        main {
+            max-width: 500px;
+            width: 100%;
+        }
+
         h1 {
-            font-size: 16px; /* Just a tiny bit bigger */
-            font-weight: 700;
-            margin-bottom: 20px;
-            text-transform: uppercase;
-        }
-
-        /* All other text elements inherit the exact same size */
-        p, a, li, ul {
-            font-size: inherit;
+            font-size: 14px; /* same size as body text */
+            font-weight: normal; /* remove bold */
+            margin-bottom: 2rem;
         }
 
         p {
-            margin-bottom: 20px;
-            text-align: justify; /* Academic papers often use justify */
+            margin-bottom: 2rem;
         }
 
         ul {
-            list-style: none; /* No bullets, just text */
-            margin-bottom: 20px;
+            list-style: none;
+            margin-bottom: 2rem;
         }
 
         li {
-            margin-bottom: 5px;
+            margin-bottom: 0.5rem;
         }
 
         a {
-            color: var(--link);
-            text-decoration: underline; /* Classic underlining */
+            color: inherit; /* no blue links */
+            text-decoration: underline;
             cursor: pointer;
         }
 
         a:hover {
-            text-decoration: none;
-            background-color: var(--fg);
-            color: var(--bg); /* Invert colors on hover for a "terminal cursor" feel */
+            text-decoration-style: double; /* subtle hover effect */
         }
 
-        hr {
-            border: 0;
-            border-bottom: 1px dashed var(--fg); /* Dashed line fits monospace better */
-            margin: 30px 0;
+        /* the toggle button */
+        #theme-toggle {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: none;
+            border: none;
+            color: inherit;
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0.5rem;
+            opacity: 0.5;
+        }
+
+        #theme-toggle:hover {
+            opacity: 1;
         }
     </style>
 </head>
 <body>
 
-    <header>
-        <h1>Michael Cheng</h1>
-    </header>
+    <main>
+        <h1>michael cheng</h1>
 
-    <section>
         <p>
-            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat. Duis aute irure dolor in reprehenderit in voluptate velit esse cillum dolore eu fugiat nulla pariatur. Excepteur sint occaecat cupidatat non proident, sunt in culpa qui officia deserunt mollit anim id est laborum.
+            lorem ipsum dolor sit amet, consectetur adipiscing elit. sed do eiusmod tempor incididunt ut labore et dolore magna aliqua. ut enim ad minim veniam, quis nostrud exercitation ullamco laboris nisi ut aliquip ex ea commodo consequat.
         </p>
-    </section>
 
-    <section>
         <ul>
-            <li><a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#109;&#101;&#64;&#109;&#105;&#99;&#104;&#97;&#101;&#108;&#99;&#104;&#101;&#110;&#103;&#46;&#100;&#101;&#118;">Email</a></li>
-            <li><a href="https://github.com/michaelchengdev">GitHub</a></li>
-            <li><a href="https://www.linkedin.com/in/michaelchengdev/">LinkedIn</a></li>
+            <li>
+                <a href="&#109;&#97;&#105;&#108;&#116;&#111;&#58;&#109;&#101;&#64;&#109;&#105;&#99;&#104;&#97;&#101;&#108;&#99;&#104;&#101;&#110;&#103;&#46;&#100;&#101;&#118;">email</a>
+            </li>
+            <li>
+                <a href="https://github.com/michaelchengdev">github</a>
+            </li>
+            <li>
+                <a href="https://www.linkedin.com/in/michaelchengdev/">linkedin</a>
+            </li>
         </ul>
-    </section>
 
-    <hr>
-
-    <footer>
         <p>
-            Viverra ipsum nunc aliquet bibendum enim facilisis gravida neque convallis. Res severa verum gaudium.
+            viverra ipsum nunc aliquet bibendum enim facilisis gravida neque convallis.
         </p>
-    </footer>
+    </main>
 
+    <button id="theme-toggle">dark</button>
+
+    <script>
+        const toggleButton = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        // check system preference on load
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            body.classList.add('dark-mode');
+            toggleButton.textContent = 'light';
+        }
+
+        toggleButton.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            
+            // if body has 'dark-mode' class, we are in dark mode, so button should offer 'light'
+            if (body.classList.contains('dark-mode')) {
+                toggleButton.textContent = 'light';
+            } else {
+                toggleButton.textContent = 'dark';
+            }
+        });
+    </script>
 </body>
 </html>
