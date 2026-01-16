@@ -168,25 +168,30 @@
             toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
         });
 
-        // --- ASCII FLUID ENGINE v5 (Variable Drop Sizes) ---
+        // --- ASCII FLUID ENGINE v6 (Ramp-Up Accelerator) ---
         const canvas = document.getElementById('ascii-overlay');
         const ctx = canvas.getContext('2d');
         const triggerBtn = document.getElementById('ripple-trigger');
         const contentBlock = document.getElementById('content-block');
         
-        // Tiered Density Characters
         const DENSITY_TIERS = [
-            ['@', '#', 'O', '0', '8', '&'], // Heaviest
+            ['@', '#', 'O', '0', '8', '&'], 
             ['o', '*', 'x', '%', 'z'],
             ['+', '=', '~', '-', '^'],
-            ['.', ',', '\'', '`', '_']      // Lightest
+            ['.', ',', '\'', '`', '_']      
         ];
         
         const FONT_SIZE = 14; 
         
         let drops = [];
         let w, h;
-        let spawnInterval;
+        
+        // ACCELERATOR VARIABLES
+        let isHolding = false;
+        let spawnRate = 0;          // Current "energy" (0 to 100)
+        let maxSpawnRate = 15;      // Max energy cap
+        let rampUpSpeed = 0.5;      // How fast it speeds up
+        let rampDownSpeed = 0.2;    // How fast it slows down (tapers off)
 
         function resize() {
             w = canvas.width = window.innerWidth;
@@ -200,7 +205,6 @@
 
         class RealisticDrop {
             constructor() {
-                // 1. Position Logic
                 const rect = contentBlock.getBoundingClientRect();
                 const padding = 50; 
                 const side = Math.random() > 0.5 ? 'left' : 'right';
@@ -212,7 +216,6 @@
                 }
                 this.y = Math.random() * h;
                 
-                // 2. Size Logic (Small, Medium, Large)
                 const r = Math.random();
                 if (r < 0.60) {
                     this.type = 'small';
@@ -227,22 +230,21 @@
                 this.friction = 0.96; 
                 this.radius = 0;
 
-                // 3. Apply physics based on size
                 if (this.type === 'small') {
-                    this.maxAge = 50 + Math.random() * 20;  // Dies very fast
-                    this.velocity = 1.5 + Math.random();    // Slower
-                    this.waveLength = 8 + Math.random() * 4;// Tight rings
-                    this.maxIntensity = 0.5;                // Caps at 50% opacity (Light chars only)
+                    this.maxAge = 50 + Math.random() * 20;  
+                    this.velocity = 1.5 + Math.random();    
+                    this.waveLength = 8 + Math.random() * 4;
+                    this.maxIntensity = 0.5;                
                 } else if (this.type === 'medium') {
                     this.maxAge = 80 + Math.random() * 30;
                     this.velocity = 2.0 + Math.random();
                     this.waveLength = 14 + Math.random() * 5;
-                    this.maxIntensity = 0.8;                // Caps at 80%
-                } else { // Large
-                    this.maxAge = 120 + Math.random() * 40; // Long lasting
-                    this.velocity = 2.8 + Math.random();    // Fast expansion
-                    this.waveLength = 22 + Math.random() * 8; // Wide rings
-                    this.maxIntensity = 1.0;                // Full density
+                    this.maxIntensity = 0.8;                
+                } else { 
+                    this.maxAge = 120 + Math.random() * 40; 
+                    this.velocity = 2.8 + Math.random();    
+                    this.waveLength = 22 + Math.random() * 8; 
+                    this.maxIntensity = 1.0;                
                 }
             }
 
@@ -256,7 +258,6 @@
 
             getRings() {
                 const rings = [];
-                // Calculate base intensity based on age (Fading out)
                 let progress = this.age / this.maxAge;
                 let baseIntensity = this.maxIntensity * (1 - progress);
                 
@@ -268,8 +269,6 @@
                     if (r <= 0) continue;
 
                     let ringIntensity = baseIntensity * (1 - (i * 0.3));
-                    
-                    // Spatial dissipation (Large rings get fainter)
                     ringIntensity *= (60 / (r + 60)); 
 
                     if (ringIntensity > 0.05) {
@@ -280,30 +279,62 @@
             }
         }
 
-        function spawnBurst(count) {
-            for(let i=0; i<count; i++) {
-                drops.push(new RealisticDrop());
-            }
-        }
-
         // --- INTERACTION ---
-        triggerBtn.addEventListener('click', () => { spawnBurst(3 + Math.floor(Math.random() * 3)); });
-        triggerBtn.addEventListener('mousedown', () => {
-            spawnBurst(1);
-            spawnInterval = setInterval(() => { spawnBurst(1); }, 150);
-        });
-        const stopSpawning = () => { clearInterval(spawnInterval); };
-        triggerBtn.addEventListener('mouseup', stopSpawning);
-        triggerBtn.addEventListener('mouseleave', stopSpawning);
+        triggerBtn.addEventListener('mousedown', () => { isHolding = true; });
+        triggerBtn.addEventListener('mouseup', () => { isHolding = false; });
+        triggerBtn.addEventListener('mouseleave', () => { isHolding = false; });
+        
         triggerBtn.addEventListener('touchstart', (e) => {
             e.preventDefault();
-            spawnInterval = setInterval(() => spawnBurst(1), 150);
+            isHolding = true; 
         });
-        triggerBtn.addEventListener('touchend', stopSpawning);
+        triggerBtn.addEventListener('touchend', () => { isHolding = false; });
+        
+        // Single click gives a small nudge to the spawn rate
+        triggerBtn.addEventListener('click', () => {
+            spawnRate += 2; // Jumpstart
+        });
 
         // --- ANIMATION ---
         function animate() {
             ctx.clearRect(0, 0, w, h);
+            
+            // 1. RATE CONTROLLER
+            if (isHolding) {
+                // Accelerate
+                if (spawnRate < maxSpawnRate) {
+                    spawnRate += rampUpSpeed;
+                }
+            } else {
+                // Decelerate (Coast to stop)
+                if (spawnRate > 0) {
+                    spawnRate -= rampDownSpeed;
+                }
+            }
+            
+            // Hard floor at 0
+            if (spawnRate < 0) spawnRate = 0;
+
+            // 2. SPAWNER
+            // spawnRate is roughly "drops per frame probability" * 10
+            // e.g. spawnRate 10 = high chance, 1 = low chance
+            if (spawnRate > 0) {
+                // Determine how many to spawn this frame
+                // We use a random chance based on the current rate
+                const chance = Math.random() * 10;
+                
+                if (chance < spawnRate) {
+                    // Spawn 1 drop
+                    drops.push(new RealisticDrop());
+                    
+                    // If rate is really high, maybe spawn a second one
+                    if (spawnRate > 10 && Math.random() > 0.5) {
+                         drops.push(new RealisticDrop());
+                    }
+                }
+            }
+
+            // 3. PHYSICS
             drops = drops.filter(d => !d.isDead);
 
             drops.forEach(drop => {
@@ -320,7 +351,6 @@
                     const alpha = safeIntensity < 0.3 ? safeIntensity * 3 : 1;
                     const circumference = 2 * Math.PI * ring.r;
                     
-                    // Small drops have sparser rings
                     const densityMod = drop.type === 'small' ? 1.5 : 1.2;
                     const charCount = Math.floor(circumference / (FONT_SIZE * densityMod));
                     
