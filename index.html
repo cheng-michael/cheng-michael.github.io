@@ -267,17 +267,13 @@
             }
 
             update() {
-                // Clear old grid position
-                if (this.gridKey) {
-                    occupiedCells.delete(this.gridKey);
-                }
-                
                 // Handle despawn timer
                 if (this.despawnTime !== null) {
                     if (Date.now() >= this.despawnTime) {
                         this.isDead = true;
                         if (this.gridKey) {
                             occupiedCells.delete(this.gridKey);
+                            this.gridKey = null;
                         }
                         return;
                     }
@@ -292,6 +288,7 @@
                     this.isDead = true;
                     if (this.gridKey) {
                         occupiedCells.delete(this.gridKey);
+                        this.gridKey = null;
                     }
                 }
             }
@@ -365,12 +362,13 @@
             let poolIndex = 0;
             const contentRect = contentBlock.getBoundingClientRect();
             
-            // Clear occupied cells for this frame
+            // Clear ALL occupied cells at the start of each frame
             occupiedCells.clear();
             
             snowflakes.forEach(flake => {
                 flake.update();
                 
+                if (flake.isDead) return;
                 if (poolIndex >= MAX_PARTICLES) return;
 
                 // SNAP TO GRID
@@ -378,12 +376,12 @@
                 const row = Math.floor(flake.y / CELL_HEIGHT);
                 const gridKey = flake.getGridKey(col, row);
                 
-                // Skip if this grid cell is already occupied
+                // Skip if this grid cell is already occupied THIS FRAME
                 if (occupiedCells.has(gridKey)) {
                     return;
                 }
                 
-                // Mark cell as occupied
+                // Mark cell as occupied for this frame
                 occupiedCells.add(gridKey);
                 flake.gridKey = gridKey;
                 
