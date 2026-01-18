@@ -244,8 +244,8 @@
         class Snowflake {
             constructor() {
                 this.x = Math.random() * w;
-                this.y = -(CELL_HEIGHT * 2 + Math.random() * CELL_HEIGHT * 3); // Start between -2 and -5 cells above screen
-                this.char = SNOWFLAKES[Math.floor(Math.random() * SNOWFLAKES.length)];
+                this.y = -50; // Start 50px above screen
+                this.char = '*';
                 
                 // Varied falling speeds
                 this.speed = 0.5 + Math.random() * 1.5;
@@ -261,9 +261,7 @@
                 this.opacity = 1.0;
                 
                 this.isDead = false;
-                this.despawnTime = null; // When to despawn (null = not despawning)
-                
-                console.log('Snowflake spawned at y:', this.y, 'CELL_HEIGHT:', CELL_HEIGHT);
+                this.despawnTime = null;
             }
 
             update() {
@@ -379,34 +377,26 @@
                 if (flake.isDead) return;
                 if (poolIndex >= MAX_PARTICLES) return;
 
-                // SNAP TO GRID
-                const col = Math.floor(flake.x / CELL_WIDTH);
-                const row = Math.floor(flake.y / CELL_HEIGHT);
+                // Don't snap to grid - use exact positions
+                const x = Math.floor(flake.x);
+                const y = Math.floor(flake.y);
                 
                 // Skip if way off screen bottom
-                if (flake.y > h + 20) return;
-                
-                const snappedX = col * CELL_WIDTH;
-                const snappedY = row * CELL_HEIGHT;
-                
-                // Debug: Log first few renders
-                if (poolIndex < 3) {
-                    console.log('Rendering flake:', {realY: flake.y, snappedY, row, visible: snappedY >= -100});
-                }
+                if (y > h + 20) return;
 
                 // Content collision check (snowflakes pass through content)
-                const isOverContent = flake.x > contentRect.left - 20 && 
-                                     flake.x < contentRect.right + 20 &&
-                                     flake.y > contentRect.top - 20 && 
-                                     flake.y < contentRect.bottom + 20;
+                const isOverContent = x > contentRect.left - 20 && 
+                                     x < contentRect.right + 20 &&
+                                     y > contentRect.top - 20 && 
+                                     y < contentRect.bottom + 20;
 
                 // Grab span from pool
                 const span = spanPool[poolIndex];
                 poolIndex++;
 
-                // Apply position using top/left instead of transform
-                span.style.top = snappedY + 'px';
-                span.style.left = snappedX + 'px';
+                // Apply position using top/left
+                span.style.top = y + 'px';
+                span.style.left = x + 'px';
                 span.textContent = flake.char;
                 span.style.opacity = isOverContent ? flake.opacity * 0.3 : flake.opacity;
             });
