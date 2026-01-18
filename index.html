@@ -308,23 +308,33 @@
 
         // Interaction Handlers
         let wasSnowing = false;
+        let releaseTimeout = null;
         
         triggerBtn.addEventListener('mousedown', () => { 
             isSnowing = true;
             wasSnowing = true;
-        });
-        triggerBtn.addEventListener('mouseup', () => { 
-            isSnowing = false;
-            if (wasSnowing) {
-                // Start despawn for all existing snowflakes
-                snowflakes.forEach(flake => flake.startDespawn());
+            // Clear any pending release timeout
+            if (releaseTimeout) {
+                clearTimeout(releaseTimeout);
+                releaseTimeout = null;
             }
         });
-        triggerBtn.addEventListener('mouseleave', () => { 
+        
+        const handleRelease = () => {
             isSnowing = false;
-            if (wasSnowing) {
+            // Wait a bit to see if any snowflakes actually spawned
+            releaseTimeout = setTimeout(() => {
                 // Start despawn for all existing snowflakes
                 snowflakes.forEach(flake => flake.startDespawn());
+                wasSnowing = false;
+                releaseTimeout = null;
+            }, 100);
+        };
+        
+        triggerBtn.addEventListener('mouseup', handleRelease);
+        triggerBtn.addEventListener('mouseleave', () => {
+            if (isSnowing) {
+                handleRelease();
             }
         });
         triggerBtn.addEventListener('click', () => { 
