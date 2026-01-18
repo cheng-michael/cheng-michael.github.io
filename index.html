@@ -263,12 +263,24 @@
                 
                 this.isDead = false;
                 this.gridKey = null; // Track current grid position
+                this.despawnTime = null; // When to despawn (null = not despawning)
             }
 
             update() {
                 // Clear old grid position
                 if (this.gridKey) {
                     occupiedCells.delete(this.gridKey);
+                }
+                
+                // Handle despawn timer
+                if (this.despawnTime !== null) {
+                    if (Date.now() >= this.despawnTime) {
+                        this.isDead = true;
+                        if (this.gridKey) {
+                            occupiedCells.delete(this.gridKey);
+                        }
+                        return;
+                    }
                 }
                 
                 this.y += this.speed;
@@ -284,16 +296,44 @@
                 }
             }
             
+            startDespawn() {
+                if (this.despawnTime === null) {
+                    // Random time between 0 and 2000ms from now
+                    const randomDelay = Math.random() * 2000;
+                    this.despawnTime = Date.now() + randomDelay;
+                }
+            }
+            
             getGridKey(col, row) {
                 return `${col},${row}`;
             }
         }
 
         // Interaction Handlers
-        triggerBtn.addEventListener('mousedown', () => { isSnowing = true; });
-        triggerBtn.addEventListener('mouseup', () => { isSnowing = false; });
-        triggerBtn.addEventListener('mouseleave', () => { isSnowing = false; });
-        triggerBtn.addEventListener('click', () => { spawnRate = Math.min(spawnRate + 0.15, maxSpawnRate); });
+        let wasSnowing = false;
+        
+        triggerBtn.addEventListener('mousedown', () => { 
+            isSnowing = true;
+            wasSnowing = true;
+        });
+        triggerBtn.addEventListener('mouseup', () => { 
+            isSnowing = false;
+            if (wasSnowing) {
+                // Start despawn for all existing snowflakes
+                snowflakes.forEach(flake => flake.startDespawn());
+            }
+        });
+        triggerBtn.addEventListener('mouseleave', () => { 
+            isSnowing = false;
+            if (wasSnowing) {
+                // Start despawn for all existing snowflakes
+                snowflakes.forEach(flake => flake.startDespawn());
+            }
+        });
+        triggerBtn.addEventListener('click', () => { 
+            spawnRate = Math.min(spawnRate + 0.15, maxSpawnRate);
+            wasSnowing = true;
+        });
 
         // --- MAIN ANIMATION LOOP ---
         function animate() {
