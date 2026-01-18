@@ -202,7 +202,7 @@
         const contentBlock = document.getElementById('content-block');
         
         // Snowflake characters
-        const SNOWFLAKES = ['*', '·', '•', '❄', '❅', '❆', '✦', '✧'];
+        const SNOWFLAKES = ['*'];
         
         // GRID SETTINGS
         const FONT_SIZE = 14; 
@@ -230,9 +230,9 @@
         // CONTROL VARIABLES
         let isSnowing = false;
         let spawnRate = 0;          
-        let maxSpawnRate = 3;      
-        let rampUpSpeed = 0.08;      
-        let rampDownSpeed = 0.03;    
+        let maxSpawnRate = 1.5;      
+        let rampUpSpeed = 0.05;      
+        let rampDownSpeed = 0.02;    
 
         window.addEventListener('resize', () => {
             w = window.innerWidth;
@@ -287,7 +287,7 @@
         triggerBtn.addEventListener('mousedown', () => { isSnowing = true; });
         triggerBtn.addEventListener('mouseup', () => { isSnowing = false; });
         triggerBtn.addEventListener('mouseleave', () => { isSnowing = false; });
-        triggerBtn.addEventListener('click', () => { spawnRate = Math.min(spawnRate + 1.5, maxSpawnRate); });
+        triggerBtn.addEventListener('click', () => { spawnRate = Math.min(spawnRate + 0.8, maxSpawnRate); });
 
         // --- MAIN ANIMATION LOOP ---
         function animate() {
