@@ -206,13 +206,14 @@
         // Snowflake characters
         const SNOWFLAKES = ['*'];
         
-        // GRID SETTINGS
+        // GRID SETTINGS - must match actual monospace character dimensions
         const FONT_SIZE = 14; 
         const LINE_HEIGHT = 1.6;
-        const CELL_HEIGHT = FONT_SIZE * LINE_HEIGHT; 
-        const CELL_WIDTH = FONT_SIZE * 0.6; 
+        const CELL_HEIGHT = FONT_SIZE * LINE_HEIGHT; // 22.4px
+        const CELL_WIDTH = FONT_SIZE * 0.6; // 8.4px for monospace
         
         let snowflakes = [];
+        let occupiedCells = new Set(); // Track occupied grid positions
         let w = window.innerWidth;
         let h = window.innerHeight;
         
@@ -257,20 +258,19 @@
                 this.wobble = Math.random() * Math.PI * 2;
                 this.wobbleSpeed = (Math.random() - 0.5) * 0.02;
                 
-                // Size variation
-                const sizeRand = Math.random();
-                if (sizeRand < 0.5) {
-                    this.opacity = 0.4 + Math.random() * 0.3;
-                } else if (sizeRand < 0.85) {
-                    this.opacity = 0.6 + Math.random() * 0.3;
-                } else {
-                    this.opacity = 0.8 + Math.random() * 0.2;
-                }
+                // Single opacity for all
+                this.opacity = 1.0;
                 
                 this.isDead = false;
+                this.gridKey = null; // Track current grid position
             }
 
             update() {
+                // Clear old grid position
+                if (this.gridKey) {
+                    occupiedCells.delete(this.gridKey);
+                }
+                
                 this.y += this.speed;
                 this.wobble += this.wobbleSpeed;
                 this.x += this.drift + Math.sin(this.wobble) * 0.3;
@@ -278,7 +278,14 @@
                 // Remove if off screen
                 if (this.y > h + 20 || this.x < -20 || this.x > w + 20) {
                     this.isDead = true;
+                    if (this.gridKey) {
+                        occupiedCells.delete(this.gridKey);
+                    }
                 }
+            }
+            
+            getGridKey(col, row) {
+                return `${col},${row}`;
             }
         }
 
@@ -318,22 +325,36 @@
             let poolIndex = 0;
             const contentRect = contentBlock.getBoundingClientRect();
             
+            // Clear occupied cells for this frame
+            occupiedCells.clear();
+            
             snowflakes.forEach(flake => {
                 flake.update();
                 
                 if (poolIndex >= MAX_PARTICLES) return;
+
+                // SNAP TO GRID
+                const col = Math.floor(flake.x / CELL_WIDTH);
+                const row = Math.floor(flake.y / CELL_HEIGHT);
+                const gridKey = flake.getGridKey(col, row);
+                
+                // Skip if this grid cell is already occupied
+                if (occupiedCells.has(gridKey)) {
+                    return;
+                }
+                
+                // Mark cell as occupied
+                occupiedCells.add(gridKey);
+                flake.gridKey = gridKey;
+                
+                const snappedX = col * CELL_WIDTH;
+                const snappedY = row * CELL_HEIGHT;
 
                 // Content collision check (snowflakes pass through content)
                 const isOverContent = flake.x > contentRect.left - 20 && 
                                      flake.x < contentRect.right + 20 &&
                                      flake.y > contentRect.top - 20 && 
                                      flake.y < contentRect.bottom + 20;
-
-                // SNAP TO GRID
-                const col = Math.floor(flake.x / CELL_WIDTH);
-                const row = Math.floor(flake.y / CELL_HEIGHT);
-                const snappedX = col * CELL_WIDTH;
-                const snappedY = row * CELL_HEIGHT + (CELL_HEIGHT - FONT_SIZE)/2;
 
                 // Grab span from pool
                 const span = spanPool[poolIndex];
