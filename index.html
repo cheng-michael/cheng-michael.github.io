@@ -1,4 +1,4 @@
- <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -6,23 +6,29 @@
     <title>Michael Cheng</title>
     <meta name="description" content="Personal website of Michael Cheng.">
 
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><style>text{fill:black;dominant-baseline:middle;text-anchor:middle}@media(prefers-color-scheme:dark){text{fill:white}}</style><text y=%2230%22 font-size=%22140%22 font-family=%22monospace%22 x=%2250%22>*</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><style>text{fill:black;dominant-baseline:middle;text-anchor:middle}@media(prefers-color-scheme:dark){text{fill:white}}</style><text y=%2270%22 font-size=%22140%22 font-family=%22monospace%22 x=%2250%22>*</text></svg>">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
 
     <style>
         :root {
             /* LIGHT MODE COLORS */
-            --bg: #ffffff;
-            --headings: #000000;
-            --text: #555555;
-            --btn-active: #000000;
+            --bg: #f9f7f4;
+            --headings: #1f1f1f;
+            --text: #7c7c7a;
+            --link: #e77728;
+            --link-hover: #fff;
         }
 
         body.dark-mode {
             /* DARK MODE COLORS */
-            --bg: #111111;
-            --headings: #ffffff;
-            --text: #a0a0a0;
-            --btn-active: #ffffff;
+            --bg: #1f1f1f;
+            --headings: #cccccc;
+            --text: #7c7c7a;
+            --link: #e77728;
+            --link-hover: #fff;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -30,8 +36,7 @@
         body {
             background-color: var(--bg);
             color: var(--text);
-            /* Monospace Stack */
-            font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+            font-family: 'IBM Plex Mono', monospace;
             font-size: 14px;
             line-height: 1.6;
             
@@ -42,10 +47,7 @@
             min-height: 100vh;
             padding: 2rem;
             
-            transition: background-color 0.3s, color 0.3s;
             overflow-x: hidden;
-            
-            /* ALLOW SELECTION of text */
             user-select: text; 
         }
 
@@ -79,15 +81,15 @@
         }
 
         a {
-            color: inherit;
+            color: var(--link);
             text-decoration: underline;
             cursor: pointer;
-            transition: color 0.2s;
         }
 
         a:hover {
-            color: #FFA239;
-            text-decoration: underline; /* Standard underline on hover */
+            background-color: var(--link);
+            color: var(--link-hover);
+            text-decoration: none;
         }
 
         /* BUTTONS */
