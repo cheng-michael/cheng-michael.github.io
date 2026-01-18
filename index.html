@@ -245,7 +245,7 @@
         class Snowflake {
             constructor() {
                 this.x = Math.random() * w;
-                this.y = -20;
+                this.y = -CELL_HEIGHT * 2; // Start well above screen
                 this.char = SNOWFLAKES[Math.floor(Math.random() * SNOWFLAKES.length)];
                 
                 // Varied falling speeds
@@ -264,6 +264,7 @@
                 this.isDead = false;
                 this.gridKey = null; // Track current grid position
                 this.despawnTime = null; // When to despawn (null = not despawning)
+                this.id = Math.random(); // Unique ID for debugging
             }
 
             update() {
@@ -307,12 +308,10 @@
         }
 
         // Interaction Handlers
-        let wasSnowing = false;
         let releaseTimeout = null;
         
         triggerBtn.addEventListener('mousedown', () => { 
             isSnowing = true;
-            wasSnowing = true;
             // Clear any pending release timeout
             if (releaseTimeout) {
                 clearTimeout(releaseTimeout);
@@ -322,13 +321,14 @@
         
         const handleRelease = () => {
             isSnowing = false;
-            // Wait a bit to see if any snowflakes actually spawned
-            releaseTimeout = setTimeout(() => {
-                // Start despawn for all existing snowflakes
-                snowflakes.forEach(flake => flake.startDespawn());
-                wasSnowing = false;
-                releaseTimeout = null;
-            }, 100);
+            // Immediately start despawn for ALL existing snowflakes
+            if (snowflakes.length > 0) {
+                snowflakes.forEach(flake => {
+                    if (!flake.isDead) {
+                        flake.startDespawn();
+                    }
+                });
+            }
         };
         
         triggerBtn.addEventListener('mouseup', handleRelease);
@@ -339,7 +339,6 @@
         });
         triggerBtn.addEventListener('click', () => { 
             spawnRate = Math.min(spawnRate + 0.15, maxSpawnRate);
-            wasSnowing = true;
         });
 
         // --- MAIN ANIMATION LOOP ---
