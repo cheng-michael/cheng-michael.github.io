@@ -6,7 +6,7 @@
     <title>Michael Cheng</title>
     <meta name="description" content="Personal website of Michael Cheng.">
 
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><style>text{fill:black;dominant-baseline:middle;text-anchor:middle}@media(prefers-color-scheme:dark){text{fill:white}}</style><text y=%2255%22 font-size=%22140%22 font-family=%22monospace%22 x=%2250%22>*</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><style>text{fill:black;dominant-baseline:middle;text-anchor:middle}@media(prefers-color-scheme:dark){text{fill:white}}</style><text y=%2230%22 font-size=%22140%22 font-family=%22monospace%22 x=%2250%22>*</text></svg>">
 
     <style>
         :root {
@@ -34,7 +34,6 @@
             font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
             font-size: 14px;
             line-height: 1.6;
-            text-transform: lowercase;
             
             display: flex;
             flex-direction: column;
@@ -189,22 +188,20 @@
 
     <script>
         // --- LAST UPDATED TIMESTAMP ---
-        function updateTimestamp() {
-            const now = new Date();
-            const year = now.getFullYear();
-            const month = String(now.getMonth() + 1).padStart(2, '0');
-            const day = String(now.getDate()).padStart(2, '0');
-            const hours = String(now.getHours()).padStart(2, '0');
-            const minutes = String(now.getMinutes()).padStart(2, '0');
-            const seconds = String(now.getSeconds()).padStart(2, '0');
-            
-            const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            document.getElementById('last-updated').textContent = `last updated: ${timestamp}`;
-        }
+        const lastModified = new Date(document.lastModified);
+        const options = { 
+            year: 'numeric', 
+            month: 'short', 
+            day: 'numeric', 
+            hour: 'numeric', 
+            minute: '2-digit',
+            hour12: true
+        };
+        const formattedDate = lastModified.toLocaleString('en-US', options);
+        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+        const timezoneAbbr = new Date().toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
         
-        // Update every second
-        updateTimestamp();
-        setInterval(updateTimestamp, 1000);
+        document.getElementById('last-updated').textContent = `Last updated: ${formattedDate} [${timezoneAbbr}]`;
 
         // --- THEME LOGIC ---
         const toggleButton = document.getElementById('theme-toggle');
