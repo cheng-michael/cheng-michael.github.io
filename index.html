@@ -6,7 +6,7 @@
     <title>Michael Cheng</title>
     <meta name="description" content="Personal website of Michael Cheng.">
 
-    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><style>text{fill:black;dominant-baseline:middle;text-anchor:middle}@media(prefers-color-scheme:dark){text{fill:white}}</style><text y=%2250%22 font-size=%22120%22 font-family=%22monospace%22 x=%2250%22>*</text></svg>">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><style>text{fill:black;dominant-baseline:middle;text-anchor:middle}@media(prefers-color-scheme:dark){text{fill:white}}</style><text y=%2255%22 font-size=%22140%22 font-family=%22monospace%22 x=%2250%22>*</text></svg>">
 
     <style>
         :root {
@@ -178,12 +178,34 @@
         <p>
             Viverra ipsum nunc aliquet bibendum enim facilisis gravida neque convallis.
         </p>
+
+        <p id="last-updated" style="margin-top: 3rem; opacity: 0.5;">
+            <!-- Will be populated by JavaScript -->
+        </p>
     </main>
 
     <button id="ripple-trigger" class="corner-btn">snow</button>
     <button id="theme-toggle" class="corner-btn">dark</button>
 
     <script>
+        // --- LAST UPDATED TIMESTAMP ---
+        function updateTimestamp() {
+            const now = new Date();
+            const year = now.getFullYear();
+            const month = String(now.getMonth() + 1).padStart(2, '0');
+            const day = String(now.getDate()).padStart(2, '0');
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            
+            const timestamp = `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+            document.getElementById('last-updated').textContent = `last updated: ${timestamp}`;
+        }
+        
+        // Update every second
+        updateTimestamp();
+        setInterval(updateTimestamp, 1000);
+
         // --- THEME LOGIC ---
         const toggleButton = document.getElementById('theme-toggle');
         const body = document.body;
