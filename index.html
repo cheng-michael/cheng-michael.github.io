@@ -357,14 +357,25 @@
                 const fractional = spawnRate - spawnCount;
                 
                 for (let i = 0; i < spawnCount; i++) {
-                    snowflakes.push(new Snowflake());
+                    const newFlake = new Snowflake();
+                    snowflakes.push(newFlake);
+                    // If we're not actively snowing, immediately mark for despawn
+                    if (!isSnowing) {
+                        newFlake.startDespawn();
+                    }
                 }
                 
                 if (Math.random() < fractional) {
-                    snowflakes.push(new Snowflake());
+                    const newFlake = new Snowflake();
+                    snowflakes.push(newFlake);
+                    // If we're not actively snowing, immediately mark for despawn
+                    if (!isSnowing) {
+                        newFlake.startDespawn();
+                    }
                 }
             }
 
+            // Filter out dead snowflakes BEFORE rendering
             snowflakes = snowflakes.filter(s => !s.isDead);
             
             // 3. Render Phase
@@ -383,6 +394,10 @@
                 // SNAP TO GRID
                 const col = Math.floor(flake.x / CELL_WIDTH);
                 const row = Math.floor(flake.y / CELL_HEIGHT);
+                
+                // Skip if off screen (but allow negative rows for snowflakes falling in from top)
+                if (row * CELL_HEIGHT > h + 20) return;
+                
                 const gridKey = flake.getGridKey(col, row);
                 
                 // Skip if this grid cell is already occupied THIS FRAME
@@ -415,7 +430,7 @@
             });
 
             // 4. Cleanup Unused Spans
-            for (let i = poolIndex; i < MAX_PARTICLES; i++) {
+            for (let i = poolIndex; i < spanPool.length; i++) {
                 spanPool[i].style.opacity = '0';
             }
 
