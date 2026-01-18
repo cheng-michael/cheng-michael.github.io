@@ -244,8 +244,8 @@
         class Snowflake {
             constructor() {
                 this.x = Math.random() * w;
-                this.y = -50; // Start 50px above screen
-                this.char = '*';
+                this.y = -CELL_HEIGHT * 2; // Start well above screen
+                this.char = SNOWFLAKES[Math.floor(Math.random() * SNOWFLAKES.length)];
                 
                 // Varied falling speeds
                 this.speed = 0.5 + Math.random() * 1.5;
@@ -377,26 +377,29 @@
                 if (flake.isDead) return;
                 if (poolIndex >= MAX_PARTICLES) return;
 
-                // Don't snap to grid - use exact positions
-                const x = Math.floor(flake.x);
-                const y = Math.floor(flake.y);
+                // SNAP TO GRID
+                const col = Math.floor(flake.x / CELL_WIDTH);
+                const row = Math.floor(flake.y / CELL_HEIGHT);
                 
                 // Skip if way off screen bottom
-                if (y > h + 20) return;
+                if (flake.y > h + 20) return;
+                
+                const snappedX = col * CELL_WIDTH;
+                const snappedY = row * CELL_HEIGHT;
 
                 // Content collision check (snowflakes pass through content)
-                const isOverContent = x > contentRect.left - 20 && 
-                                     x < contentRect.right + 20 &&
-                                     y > contentRect.top - 20 && 
-                                     y < contentRect.bottom + 20;
+                const isOverContent = flake.x > contentRect.left - 20 && 
+                                     flake.x < contentRect.right + 20 &&
+                                     flake.y > contentRect.top - 20 && 
+                                     flake.y < contentRect.bottom + 20;
 
                 // Grab span from pool
                 const span = spanPool[poolIndex];
                 poolIndex++;
 
-                // Apply position using top/left
-                span.style.top = y + 'px';
-                span.style.left = x + 'px';
+                // Apply position using top/left instead of transform
+                span.style.top = snappedY + 'px';
+                span.style.left = snappedX + 'px';
                 span.textContent = flake.char;
                 span.style.opacity = isOverContent ? flake.opacity * 0.3 : flake.opacity;
             });
