@@ -310,6 +310,7 @@
         
         const handleRelease = () => {
             isSnowing = false;
+            spawnRate = 0; // Immediately stop spawning
             // Immediately start despawn for ALL existing snowflakes
             if (snowflakes.length > 0) {
                 snowflakes.forEach(flake => {
@@ -341,11 +342,12 @@
             if (spawnRate < 0) spawnRate = 0;
 
             // 2. Spawn Logic
-            if (spawnRate > 0) {
+            if (spawnRate > 0 && snowflakes.length < MAX_PARTICLES) {
                 const spawnCount = Math.floor(spawnRate);
                 const fractional = spawnRate - spawnCount;
                 
                 for (let i = 0; i < spawnCount; i++) {
+                    if (snowflakes.length >= MAX_PARTICLES) break;
                     const newFlake = new Snowflake();
                     snowflakes.push(newFlake);
                     // If we're not actively snowing, immediately mark for despawn
@@ -354,7 +356,7 @@
                     }
                 }
                 
-                if (Math.random() < fractional) {
+                if (Math.random() < fractional && snowflakes.length < MAX_PARTICLES) {
                     const newFlake = new Snowflake();
                     snowflakes.push(newFlake);
                     // If we're not actively snowing, immediately mark for despawn
