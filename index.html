@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+ <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -86,7 +86,7 @@
         }
 
         a:hover {
-            color: var(--headings);
+            color: #FFA239;
             text-decoration: underline; /* Standard underline on hover */
         }
 
@@ -192,16 +192,15 @@
         const options = { 
             year: 'numeric', 
             month: 'short', 
-            day: 'numeric', 
-            hour: 'numeric', 
-            minute: '2-digit',
-            hour12: true
+            day: 'numeric'
         };
-        const formattedDate = lastModified.toLocaleString('en-US', options);
-        const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-        const timezoneAbbr = new Date().toLocaleTimeString('en-US', { timeZoneName: 'short' }).split(' ').pop();
+        const datePart = lastModified.toLocaleString('en-US', options);
+        const hours = String(lastModified.getHours()).padStart(2, '0');
+        const minutes = String(lastModified.getMinutes()).padStart(2, '0');
+        const timezoneOffset = -lastModified.getTimezoneOffset() / 60;
+        const timezoneStr = timezoneOffset >= 0 ? `GMT+${timezoneOffset}` : `GMT${timezoneOffset}`;
         
-        document.getElementById('last-updated').textContent = `Last updated: ${formattedDate} [${timezoneAbbr}]`;
+        document.getElementById('last-updated').textContent = `Last updated: ${datePart}, ${hours}:${minutes} [${timezoneStr}]`;
 
         // --- THEME LOGIC ---
         const toggleButton = document.getElementById('theme-toggle');
