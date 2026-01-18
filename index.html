@@ -15,20 +15,20 @@
     <style>
         :root {
             /* LIGHT MODE COLORS */
-            --bg: #f9f7f4;
-            --headings: #1f1f1f;
-            --text: #7c7c7a;
-            --link: #e77728;
+            --bg: #f8f6f3;
+            --headings: #1e1e1e;
+            --text: #7b7b79;
+            --link: #e67629;
             --link-hover: #fff;
         }
 
         body.dark-mode {
             /* DARK MODE COLORS */
-            --bg: #1f1f1f;
-            --headings: #cccccc;
-            --text: #7c7c7a;
-            --link: #e77728;
-            --link-hover: #fff;
+            --bg: #1e1e1e;
+            --headings: #cbcbcb;
+            --text: #7b7b79;
+            --link: #db9456;
+            --link-hover: #1e1e1e;
         }
 
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -191,18 +191,15 @@
     <script>
         // --- LAST UPDATED TIMESTAMP ---
         const lastModified = new Date(document.lastModified);
-        const options = { 
-            year: 'numeric', 
-            month: 'short', 
-            day: 'numeric'
-        };
-        const datePart = lastModified.toLocaleString('en-US', options);
+        const year = lastModified.getFullYear();
+        const month = String(lastModified.getMonth() + 1).padStart(2, '0');
+        const day = String(lastModified.getDate()).padStart(2, '0');
         const hours = String(lastModified.getHours()).padStart(2, '0');
         const minutes = String(lastModified.getMinutes()).padStart(2, '0');
         const timezoneOffset = -lastModified.getTimezoneOffset() / 60;
         const timezoneStr = timezoneOffset >= 0 ? `GMT+${timezoneOffset}` : `GMT${timezoneOffset}`;
         
-        document.getElementById('last-updated').textContent = `Last updated: ${datePart}, ${hours}:${minutes} [${timezoneStr}]`;
+        document.getElementById('last-updated').textContent = `Last updated: ${year}-${month}-${day}-${hours}-${minutes} [${timezoneStr}]`;
 
         // --- THEME LOGIC ---
         const toggleButton = document.getElementById('theme-toggle');
