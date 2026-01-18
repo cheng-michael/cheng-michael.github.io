@@ -142,12 +142,13 @@
         /* The individual snow characters */
         .ripple-char {
             position: absolute;
-            pointer-events: auto; /* Allow selecting the snow text */
+            pointer-events: auto;
             user-select: text;
-            will-change: transform, opacity;
             white-space: pre;
             font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
             font-size: 14px;
+            line-height: 1.6;
+            text-transform: lowercase;
         }
 
     </style>
@@ -217,7 +218,7 @@
         let h = window.innerHeight;
         
         // --- OBJECT POOL (Optimization) ---
-        const MAX_PARTICLES = 150; 
+        const MAX_PARTICLES = 50; 
         const spanPool = [];
         
         // Initialize Pool of spans
@@ -232,9 +233,9 @@
         // CONTROL VARIABLES
         let isSnowing = false;
         let spawnRate = 0;          
-        let maxSpawnRate = 0.5;      
-        let rampUpSpeed = 0.02;      
-        let rampDownSpeed = 0.01;    
+        let maxSpawnRate = 0.2;      
+        let rampUpSpeed = 0.01;      
+        let rampDownSpeed = 0.005;    
 
         window.addEventListener('resize', () => {
             w = window.innerWidth;
@@ -289,7 +290,7 @@
         triggerBtn.addEventListener('mousedown', () => { isSnowing = true; });
         triggerBtn.addEventListener('mouseup', () => { isSnowing = false; });
         triggerBtn.addEventListener('mouseleave', () => { isSnowing = false; });
-        triggerBtn.addEventListener('click', () => { spawnRate = Math.min(spawnRate + 0.3, maxSpawnRate); });
+        triggerBtn.addEventListener('click', () => { spawnRate = Math.min(spawnRate + 0.15, maxSpawnRate); });
 
         // --- MAIN ANIMATION LOOP ---
         function animate() {
