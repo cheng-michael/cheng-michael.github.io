@@ -16,8 +16,8 @@
         :root {
             /* LIGHT MODE COLORS */
             --bg: #f8f6f3;
-            --headings: #1e1e1e;
-            --text: #7b7b79;
+            --headings: #7c7c7a;
+            --text: #1f1f1f;
             --link: #e67629;
             --link-hover: #fff;
         }
@@ -25,8 +25,8 @@
         body.dark-mode {
             /* DARK MODE COLORS */
             --bg: #000000;
-            --headings: #e5e5e5;
-            --text: #b8b8b6;
+            --headings: #7c7c7a;
+            --text: #cccccc;
             --link: #db9456;
             --link-hover: #000000;
         }
@@ -162,7 +162,7 @@
 
         <p>
             Aerospace engineering student at TUM, focused on building systems, apps, and tools that work efficiently and elegantly.
-Over the past years, I’ve developed iOS applications in Swift, created 3D models and prototypes in Blender, and worked on projects that bridge engineering, software, and design. I value clear solutions, attention to detail, and approaches that scale from concept to implementation.
+Over the past years, I've developed iOS applications in Swift, created 3D models and prototypes in Blender, and worked on projects that bridge engineering, software, and design. I value clear solutions, attention to detail, and approaches that scale from concept to implementation.
         </p>
 
         <ul>
@@ -192,15 +192,18 @@ Over the past years, I’ve developed iOS applications in Swift, created 3D mode
     <script>
         // --- LAST UPDATED TIMESTAMP ---
         const lastModified = new Date(document.lastModified);
+        const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const year = lastModified.getFullYear();
-        const month = String(lastModified.getMonth() + 1).padStart(2, '0');
-        const day = String(lastModified.getDate()).padStart(2, '0');
-        const hours = String(lastModified.getHours()).padStart(2, '0');
+        const month = monthNames[lastModified.getMonth()];
+        const day = lastModified.getDate();
+        let hours = lastModified.getHours();
         const minutes = String(lastModified.getMinutes()).padStart(2, '0');
+        const ampm = hours >= 12 ? 'PM' : 'AM';
+        hours = String(hours % 12 || 12).padStart(2, '0');
         const timezoneOffset = -lastModified.getTimezoneOffset() / 60;
         const timezoneStr = timezoneOffset >= 0 ? `GMT+${timezoneOffset}` : `GMT${timezoneOffset}`;
         
-        document.getElementById('last-updated').textContent = `Last updated: ${year}-${month}-${day}-${hours}-${minutes} [${timezoneStr}]`;
+        document.getElementById('last-updated').textContent = `Last updated: ${month} ${day} ${year}, ${hours}:${minutes} ${ampm} [${timezoneStr}]`;
 
         // --- THEME LOGIC ---
         const toggleButton = document.getElementById('theme-toggle');
