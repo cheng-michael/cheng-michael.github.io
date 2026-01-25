@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Projects - Michael Cheng</title>
+    <meta name="description" content="Projects by Michael Cheng.">
+
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><style>text{fill:black;dominant-baseline:middle;text-anchor:middle;font-family:monospace;font-weight:bold}@media(prefers-color-scheme:dark){text{fill:white}}</style><text y=%2250%22 font-size=%22100%22 x=%2250%22>*</text></svg>">
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;600&display=swap" rel="stylesheet">
+
+    <style>
+        :root {
+            /* LIGHT MODE COLORS */
+            --bg: #f8f6f3;
+            --headings: #7c7c7a;
+            --text: #4a4a4a;
+            --link: #e67629;
+            --link-hover: #fff;
+        }
+
+        body.dark-mode {
+            /* DARK MODE COLORS */
+            --bg: #000000;
+            --headings: #7c7c7a;
+            --text: #a8a8a8;
+            --link: #db9456;
+            --link-hover: #000000;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: 'IBM Plex Mono', monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 2rem;
+            
+            overflow-x: hidden;
+            user-select: text; 
+        }
+
+        main {
+            max-width: 620px;
+            width: 100%;
+            text-align: left;
+            position: relative;
+            z-index: 10; 
+        }
+
+        .back-link {
+            display: inline-block;
+            color: var(--link);
+            text-decoration: underline;
+            margin-bottom: 2rem;
+            cursor: pointer;
+        }
+
+        .back-link:hover {
+            background-color: var(--link);
+            color: var(--link-hover);
+            text-decoration: none;
+        }
+
+        h1 {
+            color: var(--headings);
+            font-size: 14px;
+            font-weight: normal;
+            margin-bottom: 2rem;
+        }
+
+        .project {
+            margin-bottom: 2rem;
+            padding-bottom: 2rem;
+            border-bottom: 1px solid var(--headings);
+        }
+
+        .project:last-child {
+            border-bottom: none;
+        }
+
+        .project-header {
+            margin-bottom: 0.5rem;
+        }
+
+        .project-title {
+            color: var(--link);
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .project-title:hover {
+            background-color: var(--link);
+            color: var(--link-hover);
+            text-decoration: none;
+        }
+
+        .project-meta {
+            color: var(--headings);
+            font-size: 12px;
+            margin-bottom: 1rem;
+        }
+
+        .project-description {
+            margin-bottom: 0;
+        }
+
+        /* BUTTONS */
+        .corner-btn {
+            position: fixed;
+            bottom: 2rem;
+            background: none;
+            border: none;
+            color: var(--text);
+            font-family: inherit;
+            font-size: 14px;
+            cursor: pointer;
+            text-decoration: underline;
+            padding: 0.5rem;
+            opacity: 0.7;
+            z-index: 20;
+            user-select: none;
+        }
+
+        .corner-btn:hover {
+            color: var(--headings);
+            opacity: 1;
+        }
+
+        .corner-btn:active {
+            color: var(--headings);
+        }
+
+        #theme-toggle { right: 2rem; }
+        #ripple-trigger { left: 2rem; }
+
+        /* Hide Snow button on Mobile */
+        @media (max-width: 768px) {
+            #ripple-trigger {
+                display: none;
+            }
+        }
+
+        /* DOM SNOW CONTAINER */
+        #ripple-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1;
+            overflow: hidden;
+            font-family: Menlo, Monaco, Consolas, "Courier New", monospace;
+            font-size: 14px;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .ripple-char {
+            position: absolute;
+            pointer-events: auto;
+            user-select: text;
+        }
+    </style>
+</head>
+<body>
+
+    <div id="ripple-container"></div>
+
+    <main id="content-block">
+        <a href="/" class="back-link">← Back</a>
+        
+        <h1>Projects</h1>
+
+        <div class="project">
+            <div class="project-header">
+                <a href="https://michaelcheng.dev/aria" class="project-title">Aria</a>
+            </div>
+            <div class="project-meta">iOS Music Player • 2025</div>
+            <p class="project-description">
+                A lightweight lossless music player for iOS. Built with SwiftUI, supporting FLAC, ALAC, and other high-quality formats. I created Aria because I wanted a simple, privacy-focused player for my local music collection without the bloat of streaming services. No tracking, no ads, just music.
+            </p>
+        </div>
+    </main>
+
+    <button id="ripple-trigger" class="corner-btn">snow</button>
+    <button id="theme-toggle" class="corner-btn">dark</button>
+
+    <script>
+        // --- THEME LOGIC ---
+        const toggleButton = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            body.classList.add('dark-mode');
+            toggleButton.textContent = 'light';
+        }
+
+        toggleButton.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+            toggleButton.textContent = body.classList.contains('dark-mode') ? 'light' : 'dark';
+        });
+
+        // --- DOM-BASED SNOW ENGINE ---
+        const container = document.getElementById('ripple-container');
+        const triggerBtn = document.getElementById('ripple-trigger');
+        const contentBlock = document.getElementById('content-block');
+        
+        const SNOWFLAKES = ['*'];
+        
+        const FONT_SIZE = 14; 
+        const LINE_HEIGHT = 1.6;
+        const CELL_HEIGHT = FONT_SIZE * LINE_HEIGHT;
+        const CELL_WIDTH = FONT_SIZE * 0.6;
+        
+        let snowflakes = [];
+        let w = window.innerWidth;
+        let h = window.innerHeight;
+        
+        const MAX_PARTICLES = 50; 
+        const spanPool = [];
+        
+        for (let i = 0; i < MAX_PARTICLES; i++) {
+            const span = document.createElement('span');
+            span.className = 'ripple-char';
+            span.style.opacity = '0'; 
+            container.appendChild(span);
+            spanPool.push(span);
+        }
+
+        let isSnowing = false;
+        let spawnRate = 0;          
+        let maxSpawnRate = 0.2;      
+        let rampUpSpeed = 0.01;      
+        let rampDownSpeed = 0.005;    
+
+        window.addEventListener('resize', () => {
+            w = window.innerWidth;
+            h = window.innerHeight;
+        });
+
+        class Snowflake {
+            constructor() {
+                this.x = Math.random() * w;
+                this.y = -CELL_HEIGHT * 2;
+                this.char = SNOWFLAKES[Math.floor(Math.random() * SNOWFLAKES.length)];
+                
+                this.speed = 0.5 + Math.random() * 1.5;
+                this.drift = (Math.random() - 0.5) * 0.5;
+                this.wobble = Math.random() * Math.PI * 2;
+                this.wobbleSpeed = (Math.random() - 0.5) * 0.02;
+                this.opacity = 1.0;
+                
+                this.isDead = false;
+                this.despawnTime = null;
+            }
+
+            update() {
+                if (this.despawnTime !== null) {
+                    if (Date.now() >= this.despawnTime) {
+                        this.isDead = true;
+                        return;
+                    }
+                }
+                
+                this.y += this.speed;
+                this.wobble += this.wobbleSpeed;
+                this.x += this.drift + Math.sin(this.wobble) * 0.3;
+                
+                if (this.y > h + 20 || this.x < -20 || this.x > w + 20) {
+                    this.isDead = true;
+                }
+            }
+            
+            startDespawn() {
+                if (this.despawnTime === null) {
+                    const randomDelay = Math.random() * 2000;
+                    this.despawnTime = Date.now() + randomDelay;
+                }
+            }
+        }
+
+        let releaseTimeout = null;
+        
+        triggerBtn.addEventListener('mousedown', () => { 
+            isSnowing = true;
+            if (releaseTimeout) {
+                clearTimeout(releaseTimeout);
+                releaseTimeout = null;
+            }
+        });
+        
+        const handleRelease = () => {
+            isSnowing = false;
+            spawnRate = 0;
+            if (snowflakes.length > 0) {
+                snowflakes.forEach(flake => {
+                    if (!flake.isDead) {
+                        flake.startDespawn();
+                    }
+                });
+            }
+        };
+        
+        triggerBtn.addEventListener('mouseup', handleRelease);
+        triggerBtn.addEventListener('mouseleave', () => {
+            if (isSnowing) {
+                handleRelease();
+            }
+        });
+        triggerBtn.addEventListener('click', () => { 
+            spawnRate = Math.min(spawnRate + 0.15, maxSpawnRate);
+        });
+
+        function animate() {
+            if (isSnowing) {
+                if (spawnRate < maxSpawnRate) spawnRate += rampUpSpeed;
+            } else {
+                if (spawnRate > 0) spawnRate -= rampDownSpeed;
+            }
+            if (spawnRate < 0) spawnRate = 0;
+
+            if (spawnRate > 0 && snowflakes.length < MAX_PARTICLES) {
+                const spawnCount = Math.floor(spawnRate);
+                const fractional = spawnRate - spawnCount;
+                
+                for (let i = 0; i < spawnCount; i++) {
+                    if (snowflakes.length >= MAX_PARTICLES) break;
+                    const newFlake = new Snowflake();
+                    snowflakes.push(newFlake);
+                    if (!isSnowing) {
+                        newFlake.startDespawn();
+                    }
+                }
+                
+                if (Math.random() < fractional && snowflakes.length < MAX_PARTICLES) {
+                    const newFlake = new Snowflake();
+                    snowflakes.push(newFlake);
+                    if (!isSnowing) {
+                        newFlake.startDespawn();
+                    }
+                }
+            }
+
+            snowflakes = snowflakes.filter(s => !s.isDead);
+            
+            let poolIndex = 0;
+            const contentRect = contentBlock.getBoundingClientRect();
+            
+            snowflakes.forEach(flake => {
+                flake.update();
+                
+                if (flake.isDead) return;
+                if (poolIndex >= MAX_PARTICLES) return;
+
+                const col = Math.floor(flake.x / CELL_WIDTH);
+                const row = Math.floor(flake.y / CELL_HEIGHT);
+                
+                if (flake.y > h + 20) return;
+                
+                const snappedX = col * CELL_WIDTH;
+                const snappedY = row * CELL_HEIGHT;
+
+                const isOverContent = flake.x > contentRect.left - 20 && 
+                                     flake.x < contentRect.right + 20 &&
+                                     flake.y > contentRect.top - 20 && 
+                                     flake.y < contentRect.bottom + 20;
+
+                const span = spanPool[poolIndex];
+                poolIndex++;
+
+                span.style.top = snappedY + 'px';
+                span.style.left = snappedX + 'px';
+                span.textContent = flake.char;
+                span.style.opacity = isOverContent ? flake.opacity * 0.3 : flake.opacity;
+            });
+
+            for (let i = poolIndex; i < spanPool.length; i++) {
+                spanPool[i].style.opacity = '0';
+            }
+
+            requestAnimationFrame(animate);
+        }
+
+        animate();
+    </script>
+</body>
+</html>
