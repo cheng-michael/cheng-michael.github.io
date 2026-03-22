@@ -1,1 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ultramarine</title>
+    <meta name="description" content="Ultramarine">
+    
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><style>text{fill:black;dominant-baseline:middle;text-anchor:middle;font-family:system-ui;font-weight:600}@media(prefers-color-scheme:dark){text{fill:white}}</style><text y=%2250%22 font-size=%2270%22 x=%2250%22>A</text></svg>">
+    
+    <style>
+        :root {
+            --bg: #ffffff;
+            --secondary-bg: #f5f5f7;
+            --text: #1d1d1f;
+            --secondary-text: #86868b;
+            --link: #007aff;
+            --separator: #d2d2d7;
+        }
 
+        body.dark-mode {
+            --bg: #000000;
+            --secondary-bg: #1c1c1e;
+            --text: #f5f5f7;
+            --secondary-text: #98989d;
+            --link: #0a84ff;
+            --separator: #38383a;
+        }
+
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', sans-serif;
+            font-size: 17px;
+            line-height: 1.47;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            padding: 60px 20px 40px;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        main {
+            max-width: 640px;
+            width: 100%;
+        }
+
+        h1 {
+            font-size: 48px;
+            font-weight: 700;
+            letter-spacing: -0.015em;
+            margin-bottom: 16px;
+            text-align: center;
+        }
+        
+        h2 {
+            font-size: 28px;
+            font-weight: 600;
+            margin-bottom: 16px;
+            letter-spacing: -0.01em;
+        }
+        
+        section {
+            margin-bottom: 48px;
+        }
+        
+        section p {
+            font-size: 17px;
+            line-height: 1.6;
+        }
+
+        .subtitle {
+            font-size: 21px;
+            color: var(--secondary-text);
+            text-align: center;
+            margin-bottom: 48px;
+            font-weight: 400;
+        }
+
+        .description {
+            font-size: 17px;
+            line-height: 1.6;
+            margin-bottom: 32px;
+            text-align: center;
+            max-width: 560px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .app-store-container {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 48px;
+        }
+        
+        .app-store-badge {
+            height: 40px;
+            width: auto;
+            transition: opacity 0.3s ease;
+        }
+        
+        body.dark-mode .app-store-badge {
+            content: url('assets/app-store-white.svg');
+        }
+
+        .footer {
+            display: flex;
+            gap: 24px;
+            justify-content: center;
+            margin-top: auto;
+            padding-top: 40px;
+        }
+
+        .footer a {
+            color: var(--secondary-text);
+            text-decoration: none;
+            font-size: 15px;
+            transition: color 0.2s ease;
+        }
+
+        .footer a:hover {
+            color: var(--text);
+        }
+        
+        #theme-toggle {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 44px;
+            height: 44px;
+            border-radius: 22px;
+            border: none;
+            background-color: var(--secondary-bg);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: transform 0.2s ease, background-color 0.3s ease;
+            z-index: 100;
+        }
+        
+        #theme-toggle:hover {
+            transform: scale(1.1);
+        }
+        
+        #theme-toggle:active {
+            transform: scale(0.95);
+        }
+        
+        .theme-icon {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: var(--text);
+            position: relative;
+            transition: all 0.3s ease;
+        }
+        
+        body.dark-mode .theme-icon {
+            background: transparent;
+            box-shadow: inset -8px -8px 0 0 var(--text);
+        }
+
+        @media (max-width: 768px) {
+            h1 {
+                font-size: 40px;
+            }
+            
+            h2 {
+                font-size: 24px;
+            }
+            
+            .subtitle {
+                font-size: 19px;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <main>
+        <h1>Ultramarine</h1>
+        <p class="subtitle">Navidrome client for iOS</p>
+        
+        <p class="description">
+            Ultramarine is a native SwiftUI client for Navidrome, designed for high-fidelity streaming from your personal music server. Built on the foundation of Indigo, with a completely new networking stack and audio pipeline optimized for reliable Hi-Fi playback. No tracking, no ads, just your music.
+        </p>
+        
+        <div class="app-store-container">
+            <img src="assets/app-store-black.svg" alt="Download on the App Store" class="app-store-badge">
+        </div>
+        
+        <section>
+            <h2>Hi-Fi Streaming</h2>
+            <p>
+                Stream lossless audio directly from your Navidrome server with full support for FLAC, ALAC, WAV, and other high-quality formats. The new audio pipeline ensures stable playback and consistent sound quality across your entire library.
+            </p>
+        </section>
+        
+        <section>
+            <h2>Navidrome Integration</h2>
+            <p>
+                Connect directly to your Navidrome instance and access your complete music collection instantly. Browse artists, albums, playlists, and genres with fast loading and efficient background syncing.
+            </p>
+        </section>
+        
+        <section>
+            <h2>Metadata & Lyrics</h2>
+            <p>
+                Full metadata support displays album art, title, artist, album, and detailed track information streamed from your server. Embedded lyrics and synced .lrc files are supported for time-synchronized playback.
+            </p>
+        </section>
+        
+        <section>
+            <h2>Library Experience</h2>
+            <p>
+                Navigate large collections smoothly with a clean, responsive interface. Ultramarine is designed for fast browsing, quick search, and seamless playback across extensive self-hosted music libraries.
+            </p>
+        </section>
+        
+        <section>
+            <h2>Built on Indigo</h2>
+            <p>
+                Ultramarine reuses the design philosophy of Indigo while introducing a completely new networking architecture and streaming-focused playback engine, purpose-built for remote libraries and high-quality audio delivery.
+            </p>
+        </section>
+        
+        <section>
+            <h2>Supporter Features</h2>
+            <p>
+                Support development with an optional donation or unlock the Supporter tier for a badge and additional app icons. All core playback features are completely free.
+            </p>
+        </section>
+        
+        <div class="footer">
+            <a href="support/">Support</a>
+            <a href="privacy/">Privacy Policy</a>
+            <a href="mailto:ultramarine@michaelcheng.dev">Contact</a>
+        </div>
+        
+        <button id="theme-toggle" aria-label="Toggle theme">
+            <span class="theme-icon"></span>
+        </button>
+    </main>
+
+    <script>
+        const toggleButton = document.getElementById('theme-toggle');
+        const body = document.body;
+
+        if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            body.classList.add('dark-mode');
+        }
+
+        toggleButton.addEventListener('click', () => {
+            body.classList.toggle('dark-mode');
+        });
+    </script>
+</body>
+</html>
